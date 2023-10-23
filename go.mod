@@ -1,4 +1,4 @@
-module pic
+module gitlab.utc.fr/royhucheradorni/ia04.git
 
 go 1.20
 
