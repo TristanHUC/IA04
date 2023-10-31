@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
 	"log"
-	"pic/pkg/map"
 )
 
 const SCREEN_WIDTH = 700
