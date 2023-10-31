@@ -161,3 +161,100 @@ func AStar(m *Map, start, goal *Node) ([]*Node, bool) {
 
 	return nil, false
 }
+
+type JumpPointSearch struct {
+	Map         *Map
+	OpenSet     NodeHeap
+	Start, Goal *Node
+	GScore      map[Position]float64
+}
+
+func NewJumpPointSearch(m *Map, start, goal *Node) *JumpPointSearch {
+	jps := &JumpPointSearch{
+		Map:     m,
+		OpenSet: make(NodeHeap, 0),
+		Start:   start,
+		Goal:    goal,
+		GScore:  make(map[Position]float64),
+	}
+	heap.Init(&jps.OpenSet)
+	jps.GScore[start.Pos] = 0
+	jps.OpenSet.Push(start)
+	return jps
+}
+
+func (jps *JumpPointSearch) Search() ([]*Node, bool) {
+	for jps.OpenSet.Len() > 0 {
+		current := heap.Pop(&jps.OpenSet).(*Node)
+		if current.Pos == jps.Goal.Pos {
+			return reconstructPath(current)
+		}
+
+		successors := jps.successors(current)
+		for _, successor := range successors {
+			tentativeG := jps.GScore[current.Pos] + jps.Map.GetCostToMoveFactory(current.Pos)(successor.Pos)
+			if tentativeG < jps.GScore[successor.Pos] || jps.GScore[successor.Pos] == 0 {
+				jps.GScore[successor.Pos] = tentativeG
+				successor.Heuristic = calculateHeuristic(successor, jps.Goal)
+				heap.Push(&jps.OpenSet, successor)
+			}
+		}
+	}
+	return nil, false
+}
+
+func (jps *JumpPointSearch) successors(node *Node) []*Node {
+	successors := make([]*Node, 0)
+	for _, dir := range Directions {
+		neighborPos := node.Pos
+		for {
+			neighborPos = Position{X: neighborPos.X + dir[0], Y: neighborPos.Y + dir[1]}
+			if !jps.Map.IsOkToMoveTo(neighborPos) || neighborPos == jps.Goal.Pos {
+				break
+			}
+			jumpPoint := jps.jump(neighborPos, dir)
+			if jumpPoint != nil {
+				successor := &Node{
+					Pos:    *jumpPoint,
+					Parent: node,
+					Cost:   node.Cost + jps.Map.GetCostToMoveFactory(node.Pos)(*jumpPoint),
+				}
+				successors = append(successors, successor)
+			}
+		}
+	}
+	return successors
+}
+
+func (jps *JumpPointSearch) jump(neighborPos Position, dir [2]int) *Position {
+	if !jps.Map.IsOkToMoveTo(neighborPos) {
+		return nil
+	}
+	if neighborPos == jps.Goal.Pos {
+		return &neighborPos
+	}
+
+	nextPos := Position{X: neighborPos.X + dir[0], Y: neighborPos.Y + dir[1]}
+	if !jps.Map.IsOkToMoveTo(nextPos) || !jps.Map.IsOkToMoveTo(Position{X: nextPos.X - dir[1], Y: nextPos.Y - dir[0]}) {
+		return &neighborPos
+	}
+
+	return jps.jump(nextPos, dir)
+}
+
+func reconstructPath(node *Node) ([]*Node, bool) {
+	path := make([]*Node, 0)
+	for node != nil {
+		path = append(path, node)
+		node = node.Parent
+	}
+	return reversePath(path), true
+}
+
+func reversePath(path []*Node) []*Node {
+	reversed := make([]*Node, len(path))
+	for i, j := 0, len(path)-1; j >= 0; i, j = i+1, j-1 {
+		reversed[i] = path[j]
+	}
+	return reversed
+}
