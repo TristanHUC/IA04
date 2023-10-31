@@ -1,8 +1,7 @@
-package main
+package astar
 
 import (
 	"container/heap"
-	"fmt"
 	"math"
 )
 
@@ -161,66 +160,4 @@ func AStar(m *Map, start, goal *Node) ([]*Node, bool) {
 	}
 
 	return nil, false
-}
-
-func main() {
-	// Create a new map
-	width, height := 10, 10
-	m := NewMap(width, height)
-
-	// Set the map with some obstacles (walls)
-	m.SetCell(Position{X: 3, Y: 3}, WallCell)
-	m.SetCell(Position{X: 3, Y: 4}, WallCell)
-	m.SetCell(Position{X: 3, Y: 5}, WallCell)
-	m.SetCell(Position{X: 3, Y: 6}, WallCell)
-
-	// Set the map with some obstacles (dense cells)
-	m.SetCell(Position{X: 5, Y: 3}, DenseCell)
-	m.SetCell(Position{X: 5, Y: 4}, DenseCell)
-	m.SetCell(Position{X: 5, Y: 5}, DenseCell)
-	m.SetCell(Position{X: 5, Y: 6}, DenseCell)
-	m.SetCell(Position{X: 7, Y: 4}, DenseCell)
-	m.SetCell(Position{X: 7, Y: 5}, DenseCell)
-	m.SetCell(Position{X: 7, Y: 7}, DenseCell)
-
-	// Define the start and goal positions
-	start := &Node{Pos: Position{X: 1, Y: 1}}
-	goal := &Node{Pos: Position{X: 8, Y: 8}}
-
-	// Find the path using A* algorithm
-	path, found := AStar(m, start, goal)
-
-	if found {
-		// Create a grid to visualize the map
-		grid := make([][]rune, height)
-		for i := range grid {
-			grid[i] = make([]rune, width)
-			for j := range grid[i] {
-				switch m.GetCell(Position{X: j, Y: i}) {
-				case EmptyCell:
-					grid[i][j] = '.'
-				case WallCell:
-					grid[i][j] = '#'
-				case DenseCell:
-					grid[i][j] = 'X'
-				}
-			}
-		}
-		// Mark the path on the grid
-		for _, node := range path {
-			grid[node.Pos.Y][node.Pos.X] = '*'
-		}
-
-		// Print the map with the path
-		for i := range grid {
-			fmt.Println(string(grid[i]))
-		}
-		fmt.Println("Path found:")
-		for i := len(path) - 1; i >= 0; i-- {
-			fmt.Printf("X: %d, Y: %d\n", path[i].Pos.X, path[i].Pos.Y)
-		}
-	} else {
-		fmt.Println("Path not found")
-	}
-
 }
