@@ -5,6 +5,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font"
@@ -30,6 +31,11 @@ func InitHud(screenWidth, screenHeight int) {
 	}
 
 	wallIconImg, _, err = ebitenutil.NewImageFromFile("assets/wall.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	eraseIconImg, _, err := ebitenutil.NewImageFromFile("assets/erase.png")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -61,6 +67,7 @@ func InitHud(screenWidth, screenHeight int) {
 		image:        moveCursorImg,
 		imageOptions: &ebiten.DrawImageOptions{},
 		selected:     true,
+		mode:         ModeMove,
 	}
 	moveCursorButton.imageOptions.GeoM.Scale(0.2, 0.2)
 	moveCursorButton.imageOptions.GeoM.Translate(float64(moveCursorButton.x), float64(moveCursorButton.y))
@@ -73,11 +80,26 @@ func InitHud(screenWidth, screenHeight int) {
 		text:         "",
 		image:        wallIconImg,
 		imageOptions: &ebiten.DrawImageOptions{},
+		mode:         ModeWall,
 	}
 	wallButton.imageOptions.GeoM.Scale(0.2, 0.2)
 	wallButton.imageOptions.GeoM.Translate(float64(wallButton.x), float64(wallButton.y))
 
-	buttons = append(buttons, moveCursorButton, wallButton)
+	eraseButton := Button{
+		x:            screenWidth - 50,
+		y:            screenHeight - 150,
+		width:        40,
+		height:       40,
+		text:         "",
+		image:        eraseIconImg,
+		imageOptions: &ebiten.DrawImageOptions{},
+		mode:         ModeErase,
+	}
+
+	eraseButton.imageOptions.GeoM.Scale(0.2, 0.2)
+	eraseButton.imageOptions.GeoM.Translate(float64(eraseButton.x), float64(eraseButton.y))
+
+	buttons = append(buttons, moveCursorButton, wallButton, eraseButton)
 }
 
 func DrawButtons(screen *ebiten.Image) {
@@ -156,4 +178,39 @@ func (g *Game) DrawHud(screen *ebiten.Image) {
 		},
 	)
 	DrawButtons(screen)
+}
+
+func UpdateHud(g *Game) bool {
+	stopPropagation := false
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		x, y := ebiten.CursorPosition()
+		for i, button := range buttons {
+			if x >= button.x && x <= button.x+button.width && y >= button.y && y <= button.y+button.height {
+				buttons[i].selected = true
+				g.CurrentMode = button.mode
+				for j, _ := range buttons {
+					if j != i {
+						buttons[j].selected = false
+					}
+				}
+			}
+		}
+	}
+
+	// set cursor to point icon if hovering button
+	x, y := ebiten.CursorPosition()
+	onButton := false
+	for _, button := range buttons {
+		if x >= button.x && x <= button.x+button.width && y >= button.y && y <= button.y+button.height {
+			ebiten.SetCursorShape(ebiten.CursorShapePointer)
+			onButton = true
+			stopPropagation = true
+			break
+		}
+	}
+	if !onButton {
+		ebiten.SetCursorShape(modeToCursor[g.CurrentMode])
+	}
+
+	return stopPropagation
 }

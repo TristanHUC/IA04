@@ -26,6 +26,7 @@ func main() {
 		CameraX:      0,
 		CameraY:      0,
 		Map:          m,
+		CurrentMode:  _map.ModeMove,
 	}
 
 	// Specify the window size as you like. Here, a doubled size is specified.
@@ -36,4 +37,6 @@ func main() {
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)
 	}
+
+	game.Map.SaveToFile("testmap")
 }

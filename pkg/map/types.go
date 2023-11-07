@@ -7,7 +7,14 @@ type Mode int
 const (
 	ModeMove Mode = iota
 	ModeWall
+	ModeErase
 )
+
+var modeToCursor = map[Mode]ebiten.CursorShapeType{
+	ModeMove:  ebiten.CursorShapeMove,
+	ModeWall:  ebiten.CursorShapeCrosshair,
+	ModeErase: ebiten.CursorShapeCrosshair,
+}
 
 type Map struct {
 	Width, Height int
@@ -20,4 +27,5 @@ type Button struct {
 	image               *ebiten.Image
 	imageOptions        *ebiten.DrawImageOptions
 	selected            bool
+	mode                Mode
 }

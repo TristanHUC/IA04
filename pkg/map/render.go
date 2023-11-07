@@ -11,6 +11,7 @@ type Game struct {
 	ScreenWidth, ScreenHeight int
 	CameraX, CameraY          int
 	Map                       Map
+	CurrentMode               Mode
 }
 
 var (
@@ -24,20 +25,55 @@ var (
 var draggingPos [2]int
 var draggingCameraPos [2]int
 
-var currentMode Mode = ModeMove
-
 func (g *Game) Update() error {
-	// on drag, move camera
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		x, y := ebiten.CursorPosition()
-		if draggingPos == [2]int{-1, -1} {
-			draggingPos = [2]int{x, y}
-			draggingCameraPos = [2]int{int(g.CameraX), int(g.CameraY)}
+	// update hud
+	stopPropagation := UpdateHud(g)
+	// on drag, move camera if move mode
+	if g.CurrentMode == ModeMove {
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			x, y := ebiten.CursorPosition()
+			if draggingPos == [2]int{-1, -1} {
+				draggingPos = [2]int{x, y}
+				draggingCameraPos = [2]int{int(g.CameraX), int(g.CameraY)}
+			}
+			g.CameraX = draggingCameraPos[0] + draggingPos[0] - x
+			g.CameraY = draggingCameraPos[1] + draggingPos[1] - y
+		} else {
+			draggingPos = [2]int{-1, -1}
 		}
-		g.CameraX = draggingCameraPos[0] + draggingPos[0] - x
-		g.CameraY = draggingCameraPos[1] + draggingPos[1] - y
-	} else {
-		draggingPos = [2]int{-1, -1}
+	}
+	// on click, add wall if wall mode
+	if g.CurrentMode == ModeWall && !stopPropagation {
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			x, y := ebiten.CursorPosition()
+			// if wall does not already exist at this position
+			exists := false
+			for _, wall := range g.Map.Walls {
+				if wall[0] == int(float32(x+g.CameraX)/10) && wall[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			if !exists {
+				g.Map.Walls = append(g.Map.Walls, [2]int{
+					int(float32(x+g.CameraX) / 10),
+					int(float32(y+g.CameraY) / 10),
+				})
+			}
+
+		}
+	}
+	// on click, remove wall if erase mode
+	if g.CurrentMode == ModeErase && !stopPropagation {
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			x, y := ebiten.CursorPosition()
+			// if wall does not already exist at this position
+			for i, wall := range g.Map.Walls {
+				if wall[0] == int(float32(x+g.CameraX)/10) && wall[1] == int(float32(y+g.CameraY)/10) {
+					g.Map.Walls = append(g.Map.Walls[:i], g.Map.Walls[i+1:]...)
+					break
+				}
+			}
+		}
 	}
 	return nil
 }
