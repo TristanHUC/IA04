@@ -50,8 +50,40 @@ func (s *Simulation) Update() error {
 		vx := float64(wayPoint.Pos.X*7) - s.agentX
 		vy := float64(wayPoint.Pos.Y*7) - s.agentY
 		vNorm := math.Sqrt(vx*vx + vy*vy)
-		s.agentX += vx / vNorm
-		s.agentY += vy / vNorm
+
+		vx = vx / vNorm
+		vy = vy / vNorm
+
+		fmt.Println(vx,vy)
+		fmt.Println(s.path[s.currentWayPoint].Pos,s.agentX,s.agentY)
+
+
+		for _,mur := range s.walls{
+
+
+			vectx := float64(mur[0])+3.5-s.agentX
+			vecty := float64(mur[1])+3.5-s.agentY
+			normeEucli := math.Sqrt((float64(mur[0])+3.5-s.agentX)*(float64(mur[0])+3.5-s.agentX)+(float64(mur[1])+3.5-s.agentY)*(float64(mur[1])+3.5-s.agentY))
+
+			vectx = vectx / normeEucli
+			vecty = vecty / normeEucli
+
+
+
+			reactionMurX := vectx*(3 * math.Exp(-normeEucli/2))*10
+			reactionMurY := vecty*(3 * math.Exp(-normeEucli/2))*10
+
+			vx += reactionMurX
+			vy += reactionMurY
+
+			fmt.Println(vx,vy)
+		}
+		//fmt.Println(s.agentX,s.agentY)
+		//fmt.Println(s.path[s.currentWayPoint].Pos)
+		s.agentX += vx
+		s.agentY += vy
+
+
 		if math.Abs(s.agentX-float64(wayPoint.Pos.X*7)) < 1 && math.Abs(s.agentY-float64(wayPoint.Pos.Y*7)) < 1 {
 			s.currentWayPoint++
 		}
@@ -94,8 +126,8 @@ func main() {
 	}
 
 	sim := Simulation{
-		agentX: 0,
-		agentY: 0,
+		agentX: 70,
+		agentY: 70,
 		walls:  testmap.Walls,
 	}
 
