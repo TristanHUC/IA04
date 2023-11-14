@@ -47,44 +47,36 @@ func (s *Simulation) Update() error {
 	// move agent towards current waypoint at a speed of 2px per frame
 	if s.currentWayPoint < len(s.path) {
 		wayPoint := s.path[s.currentWayPoint]
-		vx := float64(wayPoint.Pos.X*7) - s.agentX
-		vy := float64(wayPoint.Pos.Y*7) - s.agentY
+		vx := float64(wayPoint.Pos.X*7) + 3.5 - s.agentX
+		vy := float64(wayPoint.Pos.Y*7) + 3.5 - s.agentY
 		vNorm := math.Sqrt(vx*vx + vy*vy)
 
 		vx = vx / vNorm
 		vy = vy / vNorm
 
-		fmt.Println(vx,vy)
-		fmt.Println(s.path[s.currentWayPoint].Pos,s.agentX,s.agentY)
-
-
-		for _,mur := range s.walls{
-
-
-			vectx := float64(mur[0])+3.5-s.agentX
-			vecty := float64(mur[1])+3.5-s.agentY
-			normeEucli := math.Sqrt((float64(mur[0])+3.5-s.agentX)*(float64(mur[0])+3.5-s.agentX)+(float64(mur[1])+3.5-s.agentY)*(float64(mur[1])+3.5-s.agentY))
-
+		for _, mur := range s.walls {
+			vectx := float64(mur[0])*7 + 3.5 - s.agentX
+			vecty := float64(mur[1])*7 + 3.5 - s.agentY
+			normeEucli := math.Sqrt((float64(mur[0]*7)+3.5-s.agentX)*(float64(mur[0]*7)+3.5-s.agentX) + (float64(mur[1]*7)+3.5-s.agentY)*(float64(mur[1]*7)+3.5-s.agentY))
+			if normeEucli > 50 {
+				continue
+			}
 			vectx = vectx / normeEucli
 			vecty = vecty / normeEucli
 
+			reactionMurX := vectx * (3 * math.Exp(-normeEucli/2)) * 10
+			reactionMurY := vecty * (3 * math.Exp(-normeEucli/2)) * 10
 
-
-			reactionMurX := vectx*(3 * math.Exp(-normeEucli/2))*10
-			reactionMurY := vecty*(3 * math.Exp(-normeEucli/2))*10
-
-			vx += reactionMurX
-			vy += reactionMurY
-
-			fmt.Println(vx,vy)
+			vx -= reactionMurX
+			vy -= reactionMurY
 		}
 		//fmt.Println(s.agentX,s.agentY)
 		//fmt.Println(s.path[s.currentWayPoint].Pos)
 		s.agentX += vx
 		s.agentY += vy
+		//fmt.Println(totalReactionX, totalReactionY)
 
-
-		if math.Abs(s.agentX-float64(wayPoint.Pos.X*7)) < 1 && math.Abs(s.agentY-float64(wayPoint.Pos.Y*7)) < 1 {
+		if math.Sqrt((float64(wayPoint.Pos.X*7)+3.5-s.agentX)*(float64(wayPoint.Pos.X*7)+3.5-s.agentX)+(float64(wayPoint.Pos.Y*7)+3.5-s.agentY)*(float64(wayPoint.Pos.Y*7)+3.5-s.agentY)) < 2 {
 			s.currentWayPoint++
 		}
 	}
@@ -105,6 +97,21 @@ func (s *Simulation) Draw(screen *ebiten.Image) {
 
 	// draw agent
 	ebitenvector.DrawFilledCircle(screen, float32(s.agentX), float32(s.agentY), 4, colornames.Blue, false)
+	// draw lines between waypoints
+	for i := 0; i < len(s.path)-1; i++ {
+		ebitenvector.StrokeLine(screen, float32(s.path[i].Pos.X*7)+3.5, float32(s.path[i].Pos.Y*7)+3.5, float32(s.path[i+1].Pos.X*7)+3.5, float32(s.path[i+1].Pos.Y*7)+3.5, 1, colornames.Green, false)
+	}
+	for _, mur := range s.walls {
+		normeEucli := math.Sqrt((float64(mur[0]*7)+3.5-s.agentX)*(float64(mur[0]*7)+3.5-s.agentX) + (float64(mur[1]*7)+3.5-s.agentY)*(float64(mur[1]*7)+3.5-s.agentY))
+		if normeEucli < 50 {
+			color := colornames.Blue
+			color.A = 50
+			//color.R -= uint8(normeEucli / 5)
+			//color.G -= uint8(normeEucli / 5)
+			//color.B -= uint8(normeEucli / 5)
+			ebitenvector.StrokeLine(screen, float32(s.agentX), float32(s.agentY), float32(mur[0])*7+3.5, float32(mur[1])*7+3.5, 1, color, false)
+		}
+	}
 }
 
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
