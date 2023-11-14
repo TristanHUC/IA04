@@ -17,6 +17,7 @@ var wallsMargin = 100
 type Agent struct {
 	x, y, vx, vy, gx, gy, speed, reactivity float64
 	tx, ty                                  float64
+	controllable                            bool
 }
 
 type Simulation struct {
@@ -35,7 +36,7 @@ func signedAcos(x float64) float64 {
 
 func (s *Simulation) Update() error {
 
-	// if we press up arrow, enlarge margin
+	// if we press up arrow, increase margin
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
 		wallsMargin++
 		if wallsMargin > SCREEN_WIDTH/2 {
@@ -81,6 +82,13 @@ func (s *Simulation) Update() error {
 
 	// update agents
 	for _, agent := range s.agents {
+		// if left click, move goal of controllable agent
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && agent.controllable {
+			x, y := ebiten.CursorPosition()
+			agent.gx = float64(x)
+			agent.gy = float64(y)
+		}
+
 		// compute goal velocity (norm = agent speed, direction= towards goal)
 		gvx := agent.gx - agent.x
 		gvy := agent.gy - agent.y
@@ -113,6 +121,9 @@ func (s *Simulation) Update() error {
 			n := 2.0
 			np := 3.0
 			factor := 0.15
+			//if agent.controllable {
+			//	factor = 10
+			//}
 			dist := math.Sqrt((agent.x*factor-otherAgent.x*factor)*(agent.x*factor-otherAgent.x*factor) + (agent.y*factor-otherAgent.y*factor)*(agent.y*factor-otherAgent.y*factor))
 			if dist > 10 {
 				continue
@@ -168,8 +179,20 @@ func (s *Simulation) Update() error {
 			agent.y = SCREEN_HEIGHT - 5
 		}
 
+		// if agent is way outside the walls, put it back in the middle
+		if agent.x < float64(wallsMargin-10) {
+			agent.x = float64(wallsMargin + 30)
+			agent.vx = 0
+			agent.vy = 0
+		}
+		if agent.x > float64(SCREEN_WIDTH-wallsMargin+10) {
+			agent.x = float64(SCREEN_WIDTH - wallsMargin - 30)
+			agent.vx = 0
+			agent.vy = 0
+		}
+
 		// if agent is close to goal, remove it
-		if agent.x < agent.gx+10 && agent.x > agent.gx-10 && agent.y < agent.gy+10 && agent.y > agent.gy-10 {
+		if agent.x < agent.gx+10 && agent.x > agent.gx-10 && agent.y < agent.gy+10 && agent.y > agent.gy-10 && !agent.controllable {
 			s.agents = append(s.agents[:i], s.agents[i+1:]...)
 		} else {
 			i++
@@ -186,7 +209,15 @@ func (s *Simulation) Draw(screen *ebiten.Image) {
 	ebitenvector.DrawFilledRect(screen, float32(SCREEN_WIDTH-wallsMargin), 100, 10, float32(SCREEN_HEIGHT-200), colornames.Black, false)
 
 	for _, agent := range s.agents {
-		ebitenvector.DrawFilledCircle(screen, float32(agent.x), float32(agent.y), 5, colornames.Black, true)
+		color := colornames.Black
+		if agent.controllable {
+			color = colornames.Red
+		}
+		ebitenvector.DrawFilledCircle(screen, float32(agent.x), float32(agent.y), 5, color, true)
+		// draw line to goal if controllable
+		if agent.controllable {
+			ebitenvector.StrokeLine(screen, float32(agent.x), float32(agent.y), float32(agent.gx), float32(agent.gy), 1, colornames.Blue, true)
+		}
 	}
 }
 
@@ -204,6 +235,13 @@ func main() {
 	sim := Simulation{
 		nAgents: 500,
 	}
+	sim.agents = append(sim.agents, &Agent{
+		x:            400,
+		y:            400,
+		speed:        float64(rand.Intn(5)+5) / 5,
+		reactivity:   0.2,
+		controllable: true,
+	})
 
 	// Call ebiten.RunGame to start your game loop.
 	if err := ebiten.RunGame(&sim); err != nil {
