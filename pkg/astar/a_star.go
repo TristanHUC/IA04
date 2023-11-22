@@ -2,7 +2,6 @@ package astar
 
 import (
 	"container/heap"
-	"fmt"
 	"math"
 )
 
@@ -46,7 +45,6 @@ func (m *Map) GetListWalls() [][2]int {
 			}
 		}
 	}
-	fmt.Printf("%+v\n", walls)
 	return walls
 }
 

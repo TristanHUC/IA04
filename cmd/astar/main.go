@@ -59,10 +59,6 @@ func (s *Simulation) Start() {
 	}
 }
 
-func (s *Simulation) Update() error {
-	return nil
-}
-
 func NewAgent(xStart, yStart float64, xGoal, yGoal int, picMap *astar.Map) *Agent {
 	return &Agent{
 		x:            xStart,
