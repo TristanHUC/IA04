@@ -10,11 +10,11 @@ import (
 	"golang.org/x/image/colornames"
 	"log"
 	"math"
+	"time"
 )
 
 const SCREEN_WIDTH = 700
 const SCREEN_HEIGHT = 700
-
 
 func signedAcos(x float64) float64 {
 	unsignedAcos := math.Acos(x)
@@ -25,21 +25,81 @@ func signedAcos(x float64) float64 {
 	}
 }
 
-
 type Agent struct {
-	x, y, vx, vy, gx, gy, speed, reactivity float64 // je pense qu'on peut retirer les vx, vy, gx, gy, tx, ty des attributs 
+	x, y, vx, vy, gx, gy, speed, reactivity float64 // je pense qu'on peut retirer les vx, vy, gx, gy, tx, ty des attributs
 	tx, ty                                  float64
 	controllable                            bool
-	path            						[]*astar.Node
-	currentWayPoint 						int
-	goal 									*astar.Node
-	start									*astar.Node	
-	channelAgent							chan []*Agent
-	channelMur								chan [][2]int
+	path                                    []*astar.Node
+	currentWayPoint                         int
+	goal                                    *astar.Node
+	start                                   *astar.Node
+	channelAgent                            chan []*Agent
+	channelMur                              chan [][2]int
+	picMap                                  *astar.Map
 }
 
+func (a *Agent) run() {
+	a.calculatePath()
+	for {
+		a.calculatePosition()
+		time.Sleep(10 * time.Millisecond)
+	}
+}
 
-func (a *Agent)calculePosition ()error{
+type Simulation struct {
+	agents  []*Agent
+	nAgents int
+	walls   [][2]int
+	m       *astar.Map
+}
+
+func (s *Simulation) Start() {
+	for i := 0; i < s.nAgents; i++ {
+		go s.agents[i].run()
+	}
+}
+
+func (s *Simulation) Update() error {
+	return nil
+}
+
+func NewAgent(xStart, yStart float64, xGoal, yGoal int, picMap *astar.Map) *Agent {
+	return &Agent{
+		x:            xStart,
+		y:            yStart,
+		speed:        2,
+		reactivity:   1,
+		controllable: true,
+		channelAgent: make(chan []*Agent, 1),
+		channelMur:   make(chan [][2]int, 1),
+		start:        &astar.Node{Pos: astar.Position{X: int(xStart), Y: int(yStart)}},
+		goal:         &astar.Node{Pos: astar.Position{X: xGoal, Y: yGoal}},
+		picMap:       picMap,
+	}
+}
+
+func (a *Agent) calculatePath() error {
+	// find route to goal
+	walls := a.picMap.GetListWalls()
+	closeWalls := make([][2]int, 0)
+	for _, wall := range walls {
+		normeEucli := math.Sqrt((float64(wall[0]*7)+3.5-a.x)*(float64(wall[0]*7)+3.5-a.x) + (float64(wall[1]*7)+3.5-a.y)*(float64(wall[1]*7)+3.5-a.y))
+		if normeEucli < 50 {
+			closeWalls = append(closeWalls, wall)
+		}
+	}
+	searcher := astar.NewJumpPointSearch(a.picMap, a.start, a.goal)
+	path, found := searcher.Search()
+	if !found {
+		return errors.New("no path found")
+	}
+	a.path = path
+	fmt.Printf("path calculated, len=%d\n", len(a.path))
+	a.currentWayPoint = 1
+	return nil
+}
+
+func (a *Agent) calculatePosition() error {
 
 	var wayPoint *astar.Node
 
@@ -54,9 +114,9 @@ func (a *Agent)calculePosition ()error{
 		a.vy = a.vy / vNorm
 
 		//prise en compte des murs
-		var vectx, vecty, normeEucli, reactionMurX, reactionMurY  float64
+		var vectx, vecty, normeEucli, reactionMurX, reactionMurY float64
 		var listeMur [][2]int
-		listeMur = <- a.channelMur
+		listeMur = <-a.channelMur
 		for _, mur := range listeMur {
 			vectx = float64(mur[0])*7 + 3.5 - a.x
 			vecty = float64(mur[1])*7 + 3.5 - a.y
@@ -71,11 +131,10 @@ func (a *Agent)calculePosition ()error{
 			a.vy -= reactionMurY
 		}
 
-
 		// change velocity to avoid other agents following moussaïd 2009
-		var listeAgent []*Agent
-		listeAgent = <- a.channelAgent
-		for _,otherAgent := range listeAgent{
+		var closeAgents []*Agent
+		closeAgents = <-a.channelAgent
+		for _, otherAgent := range closeAgents {
 			lambda := 2.0
 			A := 4.5
 			gamma := 0.35
@@ -85,7 +144,7 @@ func (a *Agent)calculePosition ()error{
 
 			//pour ne pas recalculer la distance on pourrait la passé dans le channel via un dictionnaire ? A discuter
 			dist := math.Sqrt((a.x*factor-otherAgent.x*factor)*(a.x*factor-otherAgent.x*factor) + (a.y*factor-otherAgent.y*factor)*(a.y*factor-otherAgent.y*factor))
-			
+
 			ex := (otherAgent.x*factor - a.x*factor) / dist
 			ey := (otherAgent.y*factor - a.y*factor) / dist
 			Dx := lambda*(a.vx*factor-otherAgent.vx*factor) + ex
@@ -122,92 +181,26 @@ func (a *Agent)calculePosition ()error{
 			a.currentWayPoint++
 		}
 	} else {
-		<- a.channelMur
-		<- a.channelAgent
-
+		<-a.channelMur
+		<-a.channelAgent
 	}
 	return nil
 }
 
-type Simulation struct {
-	agents  		[]*Agent
-	nAgents 		int
-	walls           [][2]int
-	m 				*astar.Map
+type Vue struct {
+	agents  []*Agent
+	nAgents int
+	walls   [][2]int
+	m       *astar.Map
 }
 
-func (s *Simulation) Update() error {
-
-	//initialization
-	if s.m == nil {
-		// find route to goal
-		s.m = astar.NewMap(100, 100)
-		for _, wall := range s.walls {
-			s.m.SetCell(astar.Position{X: wall[0], Y: wall[1]}, astar.WallCell)
-		}
-
-		var searcher *astar.JumpPointSearch
-		var path []*astar.Node
-		var found bool
-
-		for i:=0;i<s.nAgents; i++{
-		
-			s.agents[i].channelAgent = make(chan []*Agent,1)
-			s.agents[i].channelMur = make(chan [][2]int,1)
-
-			//s.m.SetCell(astar.Position{X: int(s.agentX / 7), Y: int(s.agentY / 7)}, astar.EmptyCell)
-			s.agents[i].start = &astar.Node{Pos: astar.Position{X: int(s.agents[i].x / 7), Y: int(s.agents[i].y / 7)}}
-			s.agents[i].goal = &astar.Node{Pos: astar.Position{X: 99, Y: 99}}
-	
-			searcher = astar.NewJumpPointSearch(s.m, s.agents[i].start, s.agents[i].goal)
-			path, found = searcher.Search()
-			if !found {
-				return errors.New("no path found")
-			}
-			s.agents[i].path = path
-			fmt.Printf("path calculated, len=%d\n", len(s.agents[i].path))
-			s.agents[i].currentWayPoint = 1
-	
-		}
-
-	}
+func (s *Vue) Update() error {
 
 	//update
-	for i:=0;i<s.nAgents; i++{
-
-		listeAgent := make([]*Agent, 0, s.nAgents)
-		listeMur := make([][2]int, 0)
-
-		//loading agent'channel with walls around them 
-		for _,mur := range s.walls{
-			normeEucli := math.Sqrt((float64(mur[0]*7)+3.5-s.agents[i].x)*(float64(mur[0]*7)+3.5-s.agents[i].x) + (float64(mur[1]*7)+3.5-s.agents[i].y)*(float64(mur[1]*7)+3.5-s.agents[i].y))
-			if normeEucli < 50 {
-				listeMur = append(listeMur, mur)
-			}
-		}
-		s.agents[i].channelMur <- listeMur		
-
-		//loading agent'channel with other agents around them 
-		for _,otherAgent := range s.agents{
-			if otherAgent == s.agents[i] {
-				continue
-			}
-			factor := 0.15
-			dist := math.Sqrt((s.agents[i].x*factor-otherAgent.x*factor)*(s.agents[i].x*factor-otherAgent.x*factor) + (s.agents[i].y*factor-otherAgent.y*factor)*(s.agents[i].y*factor-otherAgent.y*factor))
-			if dist < 10 {
-				listeAgent = append(listeAgent, otherAgent)
-			}
-		}
-		s.agents[i].channelAgent <- listeAgent
-
-		go s.agents[i].calculePosition()
-
-		
-	}
 	return nil
 }
 
-func (s *Simulation) Draw(screen *ebiten.Image) {
+func (s *Vue) Draw(screen *ebiten.Image) {
 	// fill white
 	screen.Fill(colornames.White)
 
@@ -217,14 +210,14 @@ func (s *Simulation) Draw(screen *ebiten.Image) {
 	}
 
 	//draw agents, their position and their goals
-	for i:=0;i<s.nAgents; i++{
+	for i := 0; i < s.nAgents; i++ {
 
 		// draw red circle for goal (99,99)
 		ebitenvector.DrawFilledCircle(screen, float32(s.agents[i].goal.Pos.X*7), float32(s.agents[i].goal.Pos.Y*7), 4, colornames.Red, false)
 
 		// draw agent
 		ebitenvector.DrawFilledCircle(screen, float32(s.agents[i].x), float32(s.agents[i].y), 4, colornames.Blue, false)
-		
+
 		// draw lines between waypoints
 		for j := 0; j < len(s.agents[i].path)-1; j++ {
 			ebitenvector.StrokeLine(screen, float32(s.agents[i].path[j].Pos.X*7)+3.5, float32(s.agents[i].path[j].Pos.Y*7)+3.5, float32(s.agents[i].path[j+1].Pos.X*7)+3.5, float32(s.agents[i].path[j+1].Pos.Y*7)+3.5, 1, colornames.Green, false)
@@ -242,41 +235,48 @@ func (s *Simulation) Draw(screen *ebiten.Image) {
 		}
 	}
 
-	
 }
 
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
-func (s *Simulation) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+func (s *Vue) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return SCREEN_WIDTH, SCREEN_HEIGHT
 }
 
 func main() {
 	// Specify the window size as you like. Here, a doubled size is specified.
-	ebiten.SetWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT)
-	ebiten.SetWindowTitle("Pic")
+	/*ebiten.SetWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT)
+	ebiten.SetWindowTitle("Pic")*/
 
 	// load map from file
 	testmap := _map.Map{}
 	err := testmap.LoadFromFile("testmap")
 	if err != nil {
+		fmt.Println(err)
 		return
+	}
+	m := astar.NewMap(100, 100)
+	for _, wall := range testmap.Walls {
+		m.SetCell(astar.Position{X: wall[0], Y: wall[1]}, astar.WallCell)
 	}
 
 	nAgents := 10
-	agents := make([]*Agent,0,5)
-	for i:=0;i<nAgents; i++{
-		agents = append(agents,&Agent{x: float64(70+35*i), y: float64(70)})
-	}
 
-	sim := Simulation{
-		agents :		agents,
-		nAgents :		nAgents,
-		walls:  testmap.Walls,
+	agents := make([]*Agent, nAgents)
+	for i := 0; i < nAgents; i++ {
+		agents[i] = NewAgent(float64(70+35*i), float64(70), 99, 99, m)
 	}
-
+	vue := Vue{
+		agents:  agents,
+		nAgents: nAgents,
+		walls:   testmap.Walls,
+	}
+	// calculate path for each agent
+	for i := 0; i < vue.nAgents; i++ {
+		vue.agents[i].calculatePath()
+	}
 	// Call ebiten.RunGame to start your game loop.
-	if err := ebiten.RunGame(&sim); err != nil {
+	if err := ebiten.RunGame(&vue); err != nil {
 		log.Fatal(err)
 	}
 }
