@@ -13,7 +13,7 @@ type Agent struct {
 	tx, ty                                  float64
 	controllable                            bool
 	Path                                    []*astar.Node
-	currentWayPoint                         int
+	CurrentWayPoint                         int
 	Goal                                    *astar.Node
 	start                                   *astar.Node
 	channelAgent                            chan []*Agent
@@ -69,7 +69,7 @@ func (a *Agent) calculatePath() error {
 		return errors.New("no path found")
 	}
 	a.Path = path
-	a.currentWayPoint = 1
+	a.CurrentWayPoint = 1
 	fmt.Printf("goal is now %d,%d, path length is %d from position %d,%d\n", a.Goal.Pos.X, a.Goal.Pos.Y, len(a.Path), a.start.Pos.X, a.start.Pos.Y)
 	return nil
 }
@@ -78,8 +78,8 @@ func (a *Agent) calculatePosition() error {
 	var wayPoint *astar.Node
 
 	// move agent towards current waypoint at a speed of 2px per frame
-	if a.currentWayPoint < len(a.Path) {
-		wayPoint = a.Path[a.currentWayPoint]
+	if a.CurrentWayPoint < len(a.Path) {
+		wayPoint = a.Path[a.CurrentWayPoint]
 		a.vx = float64(wayPoint.Pos.X*7) + 3.5 - a.X
 		a.vy = float64(wayPoint.Pos.Y*7) + 3.5 - a.Y
 		vNorm := math.Sqrt(a.vx*a.vx + a.vy*a.vy)
@@ -158,7 +158,7 @@ func (a *Agent) calculatePosition() error {
 
 		//passage à l'étape d'après :
 		if math.Sqrt((float64(wayPoint.Pos.X*7)+3.5-a.X)*(float64(wayPoint.Pos.X*7)+3.5-a.X)+(float64(wayPoint.Pos.Y*7)+3.5-a.Y)*(float64(wayPoint.Pos.Y*7)+3.5-a.Y)) < 2 {
-			a.currentWayPoint++
+			a.CurrentWayPoint++
 		}
 	}
 	return nil
