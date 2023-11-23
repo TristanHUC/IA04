@@ -36,6 +36,18 @@ func (m *Map) IsOkToMoveTo(position Position) bool {
 	return position.X >= 0 && position.X < m.Width && position.Y >= 0 && position.Y < m.Height && m.GetCell(position) != WallCell
 }
 
+func (m *Map) GetListWalls() [][2]int {
+	walls := make([][2]int, 0)
+	for y := 0; y < m.Height; y++ {
+		for x := 0; x < m.Width; x++ {
+			if m.GetCell(Position{X: x, Y: y}) == WallCell {
+				walls = append(walls, [2]int{x, y})
+			}
+		}
+	}
+	return walls
+}
+
 type Node struct {
 	Pos       Position
 	Parent    *Node
