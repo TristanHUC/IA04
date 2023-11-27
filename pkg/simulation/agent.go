@@ -49,7 +49,7 @@ func (a *Agent) Run() {
 		if a.lastExecutionTime.Add(17 * time.Millisecond).Before(time.Now()) {
 			a.lastExecutionTime = time.Now()
 			if a.Path == nil {
-				goalX, goalY := generateValidCoordinates(a.picMap.GetListWalls())
+				goalX, goalY := GenerateValidCoordinates(a.picMap.GetListWalls(), a.picMap.Width, a.picMap.Height)
 				a.Goal = &astar.Node{Pos: astar.Position{X: goalX, Y: goalY}}
 				a.calculatePath()
 				//for err != nil {

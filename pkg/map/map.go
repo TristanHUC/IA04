@@ -1,9 +1,19 @@
 package _map
 
 import (
+	"log"
 	"math"
 	"os"
 )
+
+func (m *Map) IsWall(x, y int) bool {
+	for _, wall := range m.Walls {
+		if wall[0] == x && wall[1] == y {
+			return true
+		}
+	}
+	return false
+}
 
 // LoadFromFile loads a map from a file.
 func (m *Map) LoadFromFile(filename string) error {
@@ -11,18 +21,26 @@ func (m *Map) LoadFromFile(filename string) error {
 	if err != nil {
 		return err
 	}
-	m.Width = 0
 	m.Height = 0
+	// mesure width on first line
+	m.Width = 0
+	column := 0
 	for _, c := range content {
+		if c == 'w' {
+			m.Walls = append(m.Walls, [2]int{column, m.Height})
+		}
 		if c == '\n' {
 			m.Height++
-			m.Width = 0
+			if column > m.Width {
+				m.Width = column
+			}
+			column = 0
 		} else {
-			m.Width++
+			column++
 		}
-		if c == 'w' {
-			m.Walls = append(m.Walls, [2]int{m.Width, m.Height})
-		}
+	}
+	if m.Width == 0 || m.Height == 0 {
+		log.Fatalf("invalid map: %dx%d", m.Width, m.Height)
 	}
 	return nil
 }
