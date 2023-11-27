@@ -19,7 +19,8 @@ func NewEnvironment(walls [][2]int, m *astar.Map, nAgents int) *Environment {
 		Agents:         make([]*Agent, nAgents),
 	}
 	for i := 0; i < nAgents; i++ {
-		env.Agents[i] = NewAgent(float64(70+35*i), float64(70), 99, 99, m, env.PerceptChannel)
+		x, y := generateValidCoordinates(walls)
+		env.Agents[i] = NewAgent(float64(x*7)+3.5, float64(y*7)+3.5, 99, 99, m, env.PerceptChannel)
 	}
 	return &env
 }
