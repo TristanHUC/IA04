@@ -15,7 +15,7 @@ func init() {
 
 func main() {
 	m := _map.Map{}
-	err := m.LoadFromFile("testmap")
+	err := m.LoadFromFile("pic")
 	if err != nil {
 		return
 	}
@@ -38,5 +38,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	game.Map.SaveToFile("testmap")
+	game.Map.SaveToFile("pic")
 }
