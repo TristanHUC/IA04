@@ -30,15 +30,15 @@ type PerceptRequest struct {
 
 func NewAgent(xStart, yStart float64, xGoal, yGoal int, picMap *astar.Map, perceptChannel chan PerceptRequest) *Agent {
 	return &Agent{
-		X:                 xStart,
-		Y:                 yStart,
-		speed:             float64(rand.Intn(5)+5) / 13,
-		reactivity:        1,
-		controllable:      true,
-		channelAgent:      make(chan []*Agent, 1),
-		perceptChannel:    perceptChannel,
-		start:             &astar.Node{Pos: astar.Position{X: int(xStart) / 7, Y: int(yStart) / 7}},
-		Goal:              &astar.Node{Pos: astar.Position{X: xGoal, Y: yGoal}},
+		X:              xStart,
+		Y:              yStart,
+		speed:          float64(rand.Intn(1)+1) / 20,
+		reactivity:     2,
+		controllable:   true,
+		channelAgent:   make(chan []*Agent, 1),
+		perceptChannel: perceptChannel,
+		//start:             &astar.Node{Pos: astar.Position{X: int(xStart) / 7, Y: int(yStart) / 7}},
+		//Goal:              &astar.Node{Pos: astar.Position{X: xGoal, Y: yGoal}},
 		picMap:            picMap,
 		lastExecutionTime: time.Now(),
 	}
@@ -50,18 +50,17 @@ func (a *Agent) Run() {
 			a.lastExecutionTime = time.Now()
 			if a.Path == nil {
 				goalX, goalY := GenerateValidCoordinates(a.picMap.GetListWalls(), a.picMap.Width, a.picMap.Height)
-				a.Goal = &astar.Node{Pos: astar.Position{X: goalX, Y: goalY}}
-				a.calculatePath()
-				//for err != nil {
-				//	goalX, goalY := generateValidCoordinates(a.picMap.GetListWalls())
-				//	a.Goal = &astar.Node{Pos: astar.Position{X: goalX, Y: goalY}}
-				//	err = a.calculatePath()
-				//}
+				a.Goal = &astar.Node{Pos: astar.Position{X: int(goalX), Y: int(goalY)}}
+				err := a.calculatePath()
+				for err != nil {
+					goalX, goalY = GenerateValidCoordinates(a.picMap.GetListWalls(), a.picMap.Width, a.picMap.Height)
+					a.Goal = &astar.Node{Pos: astar.Position{X: int(goalX), Y: int(goalY)}}
+					err = a.calculatePath()
+				}
 			}
 			// if rolling mean movement is too low, recalculate path
-			if a.rollingMeanMovement < 0.1 {
+			if a.rollingMeanMovement < 0.01 {
 				a.calculatePath()
-				//fmt.Println("stuck, recalculating path")
 			}
 			a.calculatePosition()
 		} else {
@@ -72,15 +71,7 @@ func (a *Agent) Run() {
 
 func (a *Agent) calculatePath() error {
 	// find route to goal
-	walls := a.picMap.GetListWalls()
-	closeWalls := make([][2]int, 0)
-	for _, wall := range walls {
-		normeEucli := math.Sqrt((float64(wall[0]*7)+3.5-a.X)*(float64(wall[0]*7)+3.5-a.X) + (float64(wall[1]*7)+3.5-a.Y)*(float64(wall[1]*7)+3.5-a.Y))
-		if normeEucli < 50 {
-			closeWalls = append(closeWalls, wall)
-		}
-	}
-	start := &astar.Node{Pos: astar.Position{X: int(a.X) / 7, Y: int(a.Y) / 7}}
+	start := &astar.Node{Pos: astar.Position{X: int(math.Floor(a.X)), Y: int(math.Floor(a.Y))}}
 	searcher := astar.NewJumpPointSearch(a.picMap, start, a.Goal)
 	path, found := searcher.Search()
 	if !found {
@@ -98,8 +89,8 @@ func (a *Agent) calculatePosition() error {
 	if a.CurrentWayPoint < len(a.Path) {
 		wayPoint = a.Path[a.CurrentWayPoint]
 		// compute goal velocity (norm = agent speed, direction= towards goal)
-		gvx := float64(wayPoint.Pos.X*7) + 3.5 - a.X
-		gvy := float64(wayPoint.Pos.Y*7) + 3.5 - a.Y
+		gvx := float64(wayPoint.Pos.X) - a.X
+		gvy := float64(wayPoint.Pos.Y) - a.Y
 		gvNorm := math.Sqrt(gvx*gvx + gvy*gvy)
 		gvx /= gvNorm
 		gvy /= gvNorm
@@ -114,17 +105,19 @@ func (a *Agent) calculatePosition() error {
 		var vectx, vecty, normeEucli, reactionMurX, reactionMurY float64
 		listeMur := a.picMap.GetListWalls()
 		for _, mur := range listeMur {
-			vectx = float64(mur[0])*7 + 3.5 - a.X
-			vecty = float64(mur[1])*7 + 3.5 - a.Y
-			normeEucli = math.Sqrt((float64(mur[0]*7)+3.5-a.X)*(float64(mur[0]*7)+3.5-a.X) + (float64(mur[1]*7)+3.5-a.Y)*(float64(mur[1]*7)+3.5-a.Y))
+			vectx = float64(mur[0]) + 0.5 - a.X
+			vecty = float64(mur[1]) + 0.5 - a.Y
+			normeEucli = math.Sqrt((float64(mur[0])+0.5-a.X)*(float64(mur[0])+0.5-a.X) + (float64(mur[1])+0.5-a.Y)*(float64(mur[1])+0.5-a.Y))
+
 			vectx = vectx / normeEucli
 			vecty = vecty / normeEucli
 
-			reactionMurX = vectx * (3 * math.Exp(-normeEucli/2)) * 10
-			reactionMurY = vecty * (3 * math.Exp(-normeEucli/2)) * 10
+			reactionMurX = vectx * (100 * math.Exp(-normeEucli/0.15))
+			reactionMurY = vecty * (100 * math.Exp(-normeEucli/0.15))
 
 			a.vx -= reactionMurX
 			a.vy -= reactionMurY
+
 		}
 
 		// change velocity to avoid other agents following moussaïd 2009
@@ -134,12 +127,12 @@ func (a *Agent) calculatePosition() error {
 		for _, otherAgent := range closeAgents {
 			lambda := 2.0
 			A := 4.5
-			gamma := 0.35
+			gamma := 0.2
 			n := 2.0
 			np := 3.0
-			factor := 0.15
+			factor := 1.0
 
-			//pour ne pas recalculer la distance on pourrait la passé dans le channel via un dictionnaire ? A discuter
+			// pour ne pas recalculer la distance on pourrait la passer dans le channel via un dictionnaire ? A discuter
 			dist := math.Sqrt((a.X*factor-otherAgent.X*factor)*(a.X*factor-otherAgent.X*factor) + (a.Y*factor-otherAgent.Y*factor)*(a.Y*factor-otherAgent.Y*factor))
 
 			ex := (otherAgent.X*factor - a.X*factor) / dist
@@ -161,6 +154,7 @@ func (a *Agent) calculatePosition() error {
 
 			a.vx += addedToVX
 			a.vy += addedToVY
+
 		}
 
 		// safeguard against too big values
@@ -174,8 +168,8 @@ func (a *Agent) calculatePosition() error {
 
 		a.rollingMeanMovement = (a.rollingMeanMovement + math.Sqrt(a.vx*a.vx+a.vy*a.vy)) / 2
 
-		//passage à l'étape d'après :
-		if math.Sqrt((float64(wayPoint.Pos.X*7)+3.5-a.X)*(float64(wayPoint.Pos.X*7)+3.5-a.X)+(float64(wayPoint.Pos.Y*7)+3.5-a.Y)*(float64(wayPoint.Pos.Y*7)+3.5-a.Y)) < 2 {
+		// passage à l'étape d'après :
+		if math.Sqrt((float64(wayPoint.Pos.X)-a.X)*(float64(wayPoint.Pos.X)-a.X)+(float64(wayPoint.Pos.Y)-a.Y)*(float64(wayPoint.Pos.Y)-a.Y)) < 1 {
 			a.CurrentWayPoint++
 		}
 		if a.CurrentWayPoint >= len(a.Path) {

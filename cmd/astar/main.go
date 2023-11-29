@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"github.com/ankurjha7/jps"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	ebitenvector "github.com/hajimehoshi/ebiten/v2/vector"
 	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
 	"gitlab.utc.fr/royhucheradorni/ia04.git/pkg/simulation"
 	"golang.org/x/image/colornames"
-	"log"
 )
 
 type View struct {
@@ -56,6 +56,23 @@ func MaxIndexWalls(walls [][2]int) (int, int) {
 }
 
 func (v *View) Update() error {
+	// on press space, generate new start and goal
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		randX, randY := simulation.GenerateValidCoordinates(v.Walls, len(v.Environment[0]), len(v.Environment))
+		v.start = jps.GetNode(randX, randY)
+		randX, randY = simulation.GenerateValidCoordinates(v.Walls, len(v.Environment[0]), len(v.Environment))
+		v.goal = jps.GetNode(randX, randY)
+		path, err := jps.AStarWithJump(v.Environment, v.start, v.goal, 1)
+		if err == nil {
+			v.waypoints = path.Nodes
+			for _, node := range path.Nodes {
+				fmt.Printf("%d %d -> ", node.GetRow(), node.GetCol())
+			}
+		} else {
+			v.waypoints = nil
+			//log.Fatalf("error: %v", err)
+		}
+	}
 	return nil
 }
 
@@ -128,7 +145,7 @@ func main() {
 		}
 	} else {
 		Nodes = nil
-		log.Fatalf("error: %v", err)
+		//log.Fatalf("error: %v", err)
 	}
 	//run ebiten
 	ebiten.SetWindowSize(700, 700)

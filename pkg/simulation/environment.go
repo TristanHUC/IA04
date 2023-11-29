@@ -6,7 +6,7 @@ import (
 
 type Environment struct {
 	Walls          [][2]int
-	m              *astar.Map
+	Map            *astar.Map
 	PerceptChannel chan PerceptRequest
 	Agents         []*Agent
 }
@@ -14,13 +14,13 @@ type Environment struct {
 func NewEnvironment(walls [][2]int, m *astar.Map, nAgents int) *Environment {
 	env := Environment{
 		Walls:          walls,
-		m:              m,
+		Map:            m,
 		PerceptChannel: make(chan PerceptRequest, 1),
 		Agents:         make([]*Agent, nAgents),
 	}
 	for i := 0; i < nAgents; i++ {
-		x, y := generateValidCoordinates(walls)
-		env.Agents[i] = NewAgent(float64(x*7)+3.5, float64(y*7)+3.5, 99, 99, m, env.PerceptChannel)
+		x, y := GenerateValidCoordinates(walls, m.Width, m.Height)
+		env.Agents[i] = NewAgent(float64(x), float64(y), 99, 99, m, env.PerceptChannel)
 	}
 	return &env
 }
