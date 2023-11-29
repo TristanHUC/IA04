@@ -39,6 +39,7 @@ type View struct {
 	draggingPos           [2]int
 	draggingCameraPos     [2]int
 	CurrentMode           Mode
+	cameraZoom            float64
 }
 
 var shownAgent int
@@ -75,8 +76,8 @@ func (v *View) Update() error {
 		maxH := v.sim.Environment.MapSparse.Height
 		sizeX := float64(ScreenWidth / maxW)
 		sizeY := float64(ScreenHeight / maxH)
-		mapPosX := float64(x) / sizeX
-		mapPosY := float64(y) / sizeY
+		mapPosX := (float64(x) + float64(v.cameraX)) / (sizeX * v.cameraZoom)
+		mapPosY := (float64(y) + float64(v.cameraY)) / (sizeY * v.cameraZoom)
 		// find closest agent
 		minDist := math.Inf(1)
 		closestAgent := -1
@@ -91,6 +92,16 @@ func (v *View) Update() error {
 			shownAgent = closestAgent
 		}
 	}
+
+	// scroll to zoom
+	_, yWheel := ebiten.Wheel()
+	zoomChange := v.cameraZoom * yWheel / 100
+	v.cameraZoom += zoomChange
+	// also pan when zooming, to keep the same point under the cursor
+	x, y := ebiten.CursorPosition()
+	v.cameraX += int(float64(x) * zoomChange)
+	v.cameraY += int(float64(y) * zoomChange)
+
 	return nil
 }
 
@@ -116,11 +127,10 @@ func (v *View) Draw(screen *ebiten.Image) {
 		},
 	)
 
-	// draw walls (7px thick)
 	maxW := v.sim.Environment.MapSparse.Width
 	maxH := v.sim.Environment.MapSparse.Height
-	sizeX := float32(ScreenWidth / maxW)
-	sizeY := float32(ScreenHeight / maxH)
+	sizeX := float32(ScreenWidth/maxW) * float32(v.cameraZoom)
+	sizeY := float32(ScreenHeight/maxH) * float32(v.cameraZoom)
 	for _, wall := range v.sim.Environment.MapSparse.Walls {
 		ebitenvector.DrawFilledRect(screen, float32(wall[0])*sizeX-float32(v.cameraX), float32(wall[1])*sizeY-float32(v.cameraY), sizeX, sizeY, colornames.Black, false)
 	}
@@ -136,11 +146,11 @@ func (v *View) Draw(screen *ebiten.Image) {
 
 		if v.sim.Environment.Agents[i].Path != nil && (v.showPaths || i == shownAgent) {
 			// draw red circle for goal (99,99)
-			ebitenvector.DrawFilledCircle(screen, float32(v.sim.Environment.Agents[i].Goal.GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Goal.GetRow())*sizeY+sizeY/2-float32(v.cameraY), 4, colornames.Red, false)
+			ebitenvector.DrawFilledCircle(screen, float32(v.sim.Environment.Agents[i].Goal.GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Goal.GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), colornames.Red, false)
 
 			// draw lines between all waypoints
 			for j := 0; j < len(v.sim.Environment.Agents[i].Path)-1; j++ {
-				ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].Path[j].GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Path[j].GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(v.sim.Environment.Agents[i].Path[j+1].GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Path[j+1].GetRow())*sizeY+sizeY/2-float32(v.cameraY), 1, colornames.Green, false)
+				ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].Path[j].GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Path[j].GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(v.sim.Environment.Agents[i].Path[j+1].GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Path[j+1].GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(1*v.cameraZoom), colornames.Green, false)
 			}
 
 			// draw line between agent's projection upon the line between the last waypoint and the next waypoint and the next waypoint
@@ -170,7 +180,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 				if normeEucli < 5 {
 					color := colornames.Blue
 					color.A = 50
-					ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), float32(mur[0])*sizeX+sizeX/2-float32(v.cameraX), float32(mur[1])*sizeY+sizeY/2-float32(v.cameraY), 1, color, false)
+					ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), float32(mur[0])*sizeX+sizeX/2-float32(v.cameraX), float32(mur[1])*sizeY+sizeY/2-float32(v.cameraY), float32(1*v.cameraZoom), color, false)
 				}
 			}
 		}
@@ -182,7 +192,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 				if normeEucli < 5 {
 					color := colornames.Red
 					color.A = 50
-					ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), float32(otherAgent.X)*sizeX+sizeX/2-float32(v.cameraX), float32(otherAgent.Y)*sizeY+sizeY/2-float32(v.cameraY), 1, color, false)
+					ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), float32(otherAgent.X)*sizeX+sizeX/2-float32(v.cameraX), float32(otherAgent.Y)*sizeY+sizeY/2-float32(v.cameraY), float32(1*v.cameraZoom), color, false)
 				}
 			}
 		}
@@ -249,7 +259,8 @@ func main() {
 	}
 
 	view := View{
-		sim: &sim,
+		sim:        &sim,
+		cameraZoom: 1,
 	}
 
 	sim.Start()
