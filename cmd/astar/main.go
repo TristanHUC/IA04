@@ -59,9 +59,9 @@ func (v *View) Update() error {
 	// on press space, generate new start and goal
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		randX, randY := simulation.GenerateValidCoordinates(v.Walls, len(v.Environment[0]), len(v.Environment))
-		v.start = jps.GetNode(randX, randY)
+		v.start = jps.GetNode(int(randX), int(randY))
 		randX, randY = simulation.GenerateValidCoordinates(v.Walls, len(v.Environment[0]), len(v.Environment))
-		v.goal = jps.GetNode(randX, randY)
+		v.goal = jps.GetNode(int(randX), int(randY))
 		path, err := jps.AStarWithJump(v.Environment, v.start, v.goal, 1)
 		if err == nil {
 			v.waypoints = path.Nodes
@@ -100,24 +100,6 @@ func (v *View) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func main() {
-
-	//grid := [][]uint8{
-	//	{0, 1, 0, 0, 0},
-	//	{0, 0, 1, 0, 0},
-	//	{1, 1, 1, 1, 0},
-	//	{0, 0, 0, 0, 0},
-	//}
-	//start := jps.GetNode(0, 0)
-	//end := jps.GetNode(3, 2)
-	//path, err := jps.AStarWithJump(grid, start, end, 1)
-	//if err == nil {
-	//	fmt.Printf("Path is : ")
-	//	for _, node := range path.Nodes {
-	//		fmt.Printf("%d %d -> ", node.GetRow(), node.GetCol())
-	//	}
-	//	fmt.Printf("\nTotal distance %f", path.Weight)
-	//}
-
 	maptest := _map.Map{}
 	errLoad := maptest.LoadFromFile("testmap")
 	if errLoad != nil {
@@ -125,16 +107,12 @@ func main() {
 	}
 	fmt.Println(MaxIndexWalls(maptest.Walls))
 	astarMap := MapToAstarGrid(maptest)
-	//fmt.Println("Astar map : ")
-	//PrintGrid(astarMap)
-	//start := jps.GetNode(0, 0)
-	//end := jps.GetNode(3, 2)
 	var Nodes []jps.Node
 	fmt.Println(Nodes)
 	randX, randY := simulation.GenerateValidCoordinates(maptest.Walls, maptest.Width, maptest.Height)
-	start := jps.GetNode(randX, randY)
+	start := jps.GetNode(int(randY), int(randX))
 	randX, randY = simulation.GenerateValidCoordinates(maptest.Walls, maptest.Width, maptest.Height)
-	end := jps.GetNode(randX, randY)
+	end := jps.GetNode(int(randY), int(randX))
 	fmt.Println("Start : ", start.GetRow(), start.GetCol())
 	fmt.Println("End : ", end.GetRow(), end.GetCol())
 	path, err := jps.AStarWithJump(astarMap, start, end, 1)

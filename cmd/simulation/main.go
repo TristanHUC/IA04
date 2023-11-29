@@ -5,7 +5,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	ebitenvector "github.com/hajimehoshi/ebiten/v2/vector"
-	"gitlab.utc.fr/royhucheradorni/ia04.git/pkg/astar"
 	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
 	"gitlab.utc.fr/royhucheradorni/ia04.git/pkg/simulation"
 	"golang.org/x/image/colornames"
@@ -40,8 +39,8 @@ func (v *View) Update() error {
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
-		maxW := v.sim.Environment.Map.Width
-		maxH := v.sim.Environment.Map.Height
+		maxW := v.sim.Environment.MapSparse.Width
+		maxH := v.sim.Environment.MapSparse.Height
 		sizeX := float64(ScreenWidth / maxW)
 		sizeY := float64(ScreenHeight / maxH)
 		mapPosX := float64(x) / sizeX
@@ -68,11 +67,11 @@ func (v *View) Draw(screen *ebiten.Image) {
 	screen.Fill(colornames.White)
 
 	// draw walls (7px thick)
-	maxW := v.sim.Environment.Map.Width
-	maxH := v.sim.Environment.Map.Height
+	maxW := v.sim.Environment.MapSparse.Width
+	maxH := v.sim.Environment.MapSparse.Height
 	sizeX := float32(ScreenWidth / maxW)
 	sizeY := float32(ScreenHeight / maxH)
-	for _, wall := range v.sim.Environment.Walls {
+	for _, wall := range v.sim.Environment.MapSparse.Walls {
 		ebitenvector.DrawFilledRect(screen, float32(wall[0])*sizeX, float32(wall[1])*sizeY, sizeX, sizeY, colornames.Black, false)
 	}
 
@@ -87,20 +86,20 @@ func (v *View) Draw(screen *ebiten.Image) {
 
 		if v.sim.Environment.Agents[i].Path != nil && (v.showPaths || i == shownAgent) {
 			// draw red circle for goal (99,99)
-			ebitenvector.DrawFilledCircle(screen, float32(v.sim.Environment.Agents[i].Goal.Pos.X)*sizeX+sizeX/2, float32(v.sim.Environment.Agents[i].Goal.Pos.Y)*sizeY+sizeY/2, 4, colornames.Red, false)
+			ebitenvector.DrawFilledCircle(screen, float32(v.sim.Environment.Agents[i].Goal.GetCol())*sizeX+sizeX/2, float32(v.sim.Environment.Agents[i].Goal.GetRow())*sizeY+sizeY/2, 4, colornames.Red, false)
 
-			// draw lines between future waypoints
-			for j := v.sim.Environment.Agents[i].CurrentWayPoint; j < len(v.sim.Environment.Agents[i].Path)-1; j++ {
-				ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].Path[j].Pos.X)*sizeX+sizeX/2, float32(v.sim.Environment.Agents[i].Path[j].Pos.Y)*sizeY+sizeY/2, float32(v.sim.Environment.Agents[i].Path[j+1].Pos.X)*sizeX+sizeX/2, float32(v.sim.Environment.Agents[i].Path[j+1].Pos.Y)*sizeY+sizeY/2, 1, colornames.Green, false)
+			// draw lines between all waypoints
+			for j := 0; j < len(v.sim.Environment.Agents[i].Path)-1; j++ {
+				ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].Path[j].GetCol())*sizeX+sizeX/2, float32(v.sim.Environment.Agents[i].Path[j].GetRow())*sizeY+sizeY/2, float32(v.sim.Environment.Agents[i].Path[j+1].GetCol())*sizeX+sizeX/2, float32(v.sim.Environment.Agents[i].Path[j+1].GetRow())*sizeY+sizeY/2, 1, colornames.Green, false)
 			}
 
 			// draw line between agent's projection upon the line between the last waypoint and the next waypoint and the next waypoint
-			var currentWayPoint *astar.Node
-			if v.sim.Environment.Agents[i].CurrentWayPoint >= len(v.sim.Environment.Agents[i].Path)-1 {
-				currentWayPoint = v.sim.Environment.Agents[i].Goal
-			} else {
-				currentWayPoint = v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint]
-			}
+			//var currentWayPoint *jps.Node
+			//if v.sim.Environment.Agents[i].CurrentWayPoint >= len(v.sim.Environment.Agents[i].Path)-1 {
+			//	currentWayPoint = v.sim.Environment.Agents[i].Goal
+			//} else {
+			//	currentWayPoint = &v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint]
+			//}
 			//waypointsVectorX := float32(currentWayPoint.Pos.X-v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint-1].Pos.X)*sizeX + sizeX/2
 			//waypointsVectorY := float32(currentWayPoint.Pos.Y-v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint-1].Pos.Y)*sizeY + sizeY/2
 			//agentVectorX := float32(v.sim.Environment.Agents[i].X) - float32(v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint-1].Pos.X)*sizeX - sizeX/2
@@ -111,12 +110,12 @@ func (v *View) Draw(screen *ebiten.Image) {
 			//ebitenvector.StrokeLine(screen, ProjectedX, ProjectedY, float32(currentWayPoint.Pos.X)*sizeX+sizeX/2, float32(currentWayPoint.Pos.Y)*sizeY+sizeY/2, 1, colornames.Green, false)
 
 			// draw line between agent and next waypoint
-			ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2, float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2, float32(currentWayPoint.Pos.X)*sizeX+sizeX/2, float32(currentWayPoint.Pos.Y)*sizeY+sizeY/2, 1, colornames.Green, false)
+			//ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2, float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2, float32(currentWayPoint.GetCol())*sizeX+sizeX/2, float32(currentWayPoint.GetRow())*sizeY+sizeY/2, 1, colornames.Green, false)
 		}
 
 		// draw line between agent and walls that affect it
 		if v.showWallInteractions || i == shownAgent {
-			for _, mur := range v.sim.Environment.Walls {
+			for _, mur := range v.sim.Environment.MapSparse.Walls {
 				normeEucli := math.Sqrt((float64(mur[0])-v.sim.Environment.Agents[i].X)*(float64(mur[0])-v.sim.Environment.Agents[i].X) + (float64(mur[1])-v.sim.Environment.Agents[i].Y)*(float64(mur[1])-v.sim.Environment.Agents[i].Y))
 				if normeEucli < 5 {
 					color := colornames.Blue
@@ -166,14 +165,17 @@ func main() {
 	}
 	maxW++
 	maxH++
-	m := astar.NewMap(maxW, maxH)
+	var testMapDense [][]uint8
+	for i := 0; i < maxH; i++ {
+		testMapDense = append(testMapDense, make([]uint8, maxW))
+	}
 	for _, wall := range testmap.Walls {
-		m.SetCell(astar.Position{X: wall[0], Y: wall[1]}, astar.WallCell)
+		testMapDense[wall[1]][wall[0]] = 1
 	}
 
-	nAgents := 500
+	nAgents := 200
 
-	env := simulation.NewEnvironment(testmap.Walls, m, nAgents)
+	env := simulation.NewEnvironment(testmap, testMapDense, nAgents)
 	sim := simulation.Simulation{
 		Environment: env,
 		NAgents:     nAgents,

@@ -2,7 +2,8 @@ package simulation
 
 import (
 	"errors"
-	"gitlab.utc.fr/royhucheradorni/ia04.git/pkg/astar"
+	"github.com/ankurjha7/jps"
+	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
 	"math"
 	"math/rand"
 	"time"
@@ -12,13 +13,14 @@ type Agent struct {
 	X, Y, vx, vy, gx, gy, speed, reactivity float64 // je pense qu'on peut retirer les vx, vy, gx, gy, tx, ty des attributs
 	tx, ty                                  float64
 	controllable                            bool
-	Path                                    []*astar.Node
+	Path                                    []jps.Node
 	CurrentWayPoint                         int
-	Goal                                    *astar.Node
-	start                                   *astar.Node
+	Goal                                    *jps.Node
+	start                                   *jps.Node
 	channelAgent                            chan []*Agent
 	perceptChannel                          chan PerceptRequest
-	picMap                                  *astar.Map
+	picMapDense                             [][]uint8
+	picMapSparse                            *_map.Map
 	rollingMeanMovement                     float64
 	lastExecutionTime                       time.Time
 }
@@ -28,7 +30,7 @@ type PerceptRequest struct {
 	ResponseChannel chan []*Agent
 }
 
-func NewAgent(xStart, yStart float64, xGoal, yGoal int, picMap *astar.Map, perceptChannel chan PerceptRequest) *Agent {
+func NewAgent(xStart, yStart float64, xGoal, yGoal int, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest) *Agent {
 	return &Agent{
 		X:              xStart,
 		Y:              yStart,
@@ -39,7 +41,8 @@ func NewAgent(xStart, yStart float64, xGoal, yGoal int, picMap *astar.Map, perce
 		perceptChannel: perceptChannel,
 		//start:             &astar.Node{Pos: astar.Position{X: int(xStart) / 7, Y: int(yStart) / 7}},
 		//Goal:              &astar.Node{Pos: astar.Position{X: xGoal, Y: yGoal}},
-		picMap:            picMap,
+		picMapDense:       picMapDense,
+		picMapSparse:      picMapSparse,
 		lastExecutionTime: time.Now(),
 	}
 }
@@ -49,12 +52,14 @@ func (a *Agent) Run() {
 		if a.lastExecutionTime.Add(17 * time.Millisecond).Before(time.Now()) {
 			a.lastExecutionTime = time.Now()
 			if a.Path == nil {
-				goalX, goalY := GenerateValidCoordinates(a.picMap.GetListWalls(), a.picMap.Width, a.picMap.Height)
-				a.Goal = &astar.Node{Pos: astar.Position{X: int(goalX), Y: int(goalY)}}
+				goalX, goalY := GenerateValidCoordinates(a.picMapSparse.Walls, a.picMapSparse.Width, a.picMapSparse.Height)
+				g := jps.GetNode(int(goalX), int(goalY))
+				a.Goal = &g
 				err := a.calculatePath()
 				for err != nil {
-					goalX, goalY = GenerateValidCoordinates(a.picMap.GetListWalls(), a.picMap.Width, a.picMap.Height)
-					a.Goal = &astar.Node{Pos: astar.Position{X: int(goalX), Y: int(goalY)}}
+					goalX, goalY = GenerateValidCoordinates(a.picMapSparse.Walls, a.picMapSparse.Width, a.picMapSparse.Height)
+					g := jps.GetNode(int(goalX), int(goalY))
+					a.Goal = &g
 					err = a.calculatePath()
 				}
 			}
@@ -71,26 +76,25 @@ func (a *Agent) Run() {
 
 func (a *Agent) calculatePath() error {
 	// find route to goal
-	start := &astar.Node{Pos: astar.Position{X: int(math.Floor(a.X)), Y: int(math.Floor(a.Y))}}
-	searcher := astar.NewJumpPointSearch(a.picMap, start, a.Goal)
-	path, found := searcher.Search()
-	if !found {
+	start := jps.GetNode(int(math.Floor(a.Y)), int(math.Floor(a.X)))
+	path, err := jps.AStarWithJump(a.picMapDense, start, *a.Goal, 1)
+	if err != nil {
 		return errors.New("no path found")
 	}
-	a.Path = path
+	a.Path = path.Nodes
 	a.CurrentWayPoint = 1
 	return nil
 }
 
 func (a *Agent) calculatePosition() error {
-	var wayPoint *astar.Node
+	var wayPoint jps.Node
 
 	// move agent towards current waypoint at a speed of 2px per frame
 	if a.CurrentWayPoint < len(a.Path) {
 		wayPoint = a.Path[a.CurrentWayPoint]
 		// compute goal velocity (norm = agent speed, direction= towards goal)
-		gvx := float64(wayPoint.Pos.X) - a.X
-		gvy := float64(wayPoint.Pos.Y) - a.Y
+		gvx := float64(wayPoint.GetCol()) - a.X
+		gvy := float64(wayPoint.GetRow()) - a.Y
 		gvNorm := math.Sqrt(gvx*gvx + gvy*gvy)
 		gvx /= gvNorm
 		gvy /= gvNorm
@@ -103,7 +107,7 @@ func (a *Agent) calculatePosition() error {
 
 		//prise en compte des murs
 		var vectx, vecty, normeEucli, reactionMurX, reactionMurY float64
-		listeMur := a.picMap.GetListWalls()
+		listeMur := a.picMapSparse.Walls
 		for _, mur := range listeMur {
 			vectx = float64(mur[0]) + 0.5 - a.X
 			vecty = float64(mur[1]) + 0.5 - a.Y
@@ -169,7 +173,7 @@ func (a *Agent) calculatePosition() error {
 		a.rollingMeanMovement = (a.rollingMeanMovement + math.Sqrt(a.vx*a.vx+a.vy*a.vy)) / 2
 
 		// passage à l'étape d'après :
-		if math.Sqrt((float64(wayPoint.Pos.X)-a.X)*(float64(wayPoint.Pos.X)-a.X)+(float64(wayPoint.Pos.Y)-a.Y)*(float64(wayPoint.Pos.Y)-a.Y)) < 1 {
+		if math.Sqrt((float64(wayPoint.GetCol())-a.X)*(float64(wayPoint.GetCol())-a.X)+(float64(wayPoint.GetRow())-a.Y)*(float64(wayPoint.GetRow())-a.Y)) < 1 {
 			a.CurrentWayPoint++
 		}
 		if a.CurrentWayPoint >= len(a.Path) {
