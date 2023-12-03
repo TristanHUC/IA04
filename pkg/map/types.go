@@ -17,8 +17,11 @@ var modeToCursor = map[Mode]ebiten.CursorShapeType{
 }
 
 type Map struct {
-	Width, Height int
-	Walls         [][2]int
+	Width, Height     int
+	Walls             [][2]int
+	BarPoints         [][2]int
+	ManToiletPoints   [][2]int
+	WomanToiletPoints [][2]int
 }
 
 type Button struct {
