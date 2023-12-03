@@ -29,6 +29,15 @@ func (m *Map) LoadFromFile(filename string) error {
 		if c == 'w' {
 			m.Walls = append(m.Walls, [2]int{column, m.Height})
 		}
+		if c == 'm' {
+			m.ManToiletPoints = append(m.ManToiletPoints, [2]int{column, m.Height})
+		}
+		if c == 'f' {
+			m.WomanToiletPoints = append(m.WomanToiletPoints, [2]int{column, m.Height})
+		}
+		if c == 'f' {
+			m.BarPoints = append(m.BarPoints, [2]int{column, m.Height})
+		}
 		if c == '\n' {
 			m.Height++
 			if column > m.Width {
