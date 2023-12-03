@@ -35,7 +35,7 @@ func (m *Map) LoadFromFile(filename string) error {
 		if c == 'f' {
 			m.WomanToiletPoints = append(m.WomanToiletPoints, [2]int{column, m.Height})
 		}
-		if c == 'f' {
+		if c == 'b' {
 			m.BarPoints = append(m.BarPoints, [2]int{column, m.Height})
 		}
 		if c == '\n' {
@@ -83,6 +83,11 @@ func (m *Map) SaveToFile(filename string) error {
 	for y := int(minYWall); y <= int(maxYWall); y++ {
 		for x := int(minXWall); x <= int(maxXWall); x++ {
 			isWall := false
+			isBar := false
+			isWomanToilet := false
+			isManToilet := false
+
+			//adding wall to the map
 			for _, wall := range m.Walls {
 				if wall[0] == x && wall[1] == y {
 					isWall = true
@@ -94,6 +99,46 @@ func (m *Map) SaveToFile(filename string) error {
 			} else {
 				f.Write([]byte{' '})
 			}
+
+			//adding Bar to the map
+			for _, Bar := range m.BarPoints {
+				if Bar[0] == x && Bar[1] == y {
+					isBar = true
+					break
+				}
+			}
+			if isBar {
+				f.Write([]byte{'b'})
+			} else {
+				f.Write([]byte{' '})
+			}
+
+			//adding WomanToilet to the map
+			for _, WomanToilet := range m.WomanToiletPoints {
+				if WomanToilet[0] == x && WomanToilet[1] == y {
+					isWomanToilet = true
+					break
+				}
+			}
+			if isWomanToilet {
+				f.Write([]byte{'f'})
+			} else {
+				f.Write([]byte{' '})
+			}
+
+			//adding ManToilet to the map
+			for _, ManToilet := range m.ManToiletPoints {
+				if ManToilet[0] == x && ManToilet[1] == y {
+					isManToilet = true
+					break
+				}
+			}
+			if isManToilet {
+				f.Write([]byte{'m'})
+			} else {
+				f.Write([]byte{' '})
+			}			
+			
 		}
 		f.Write([]byte{'\n'})
 	}
