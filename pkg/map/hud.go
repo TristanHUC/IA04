@@ -39,6 +39,22 @@ func InitHud(screenWidth, screenHeight int) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	beerIconImg, _, err := ebitenutil.NewImageFromFile("assets/beer.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	manWCIconImg, _, err := ebitenutil.NewImageFromFile("assets/ManWC.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	womanWCIconImg, _, err := ebitenutil.NewImageFromFile("assets/WomanWC.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ebiten.SetCursorShape(ebiten.CursorShapeMove)
 
 	// load font
@@ -99,7 +115,49 @@ func InitHud(screenWidth, screenHeight int) {
 	eraseButton.imageOptions.GeoM.Scale(0.2, 0.2)
 	eraseButton.imageOptions.GeoM.Translate(float64(eraseButton.x), float64(eraseButton.y))
 
-	buttons = append(buttons, moveCursorButton, wallButton, eraseButton)
+	beerButton := Button{
+		x:            screenWidth - 50,
+		y:            screenHeight - 200,
+		width:        40,
+		height:       40,
+		text:         "",
+		image:        beerIconImg,
+		imageOptions: &ebiten.DrawImageOptions{},
+		mode:         ModeBeer,
+	}
+
+	beerButton.imageOptions.GeoM.Scale(0.2, 0.2)
+	beerButton.imageOptions.GeoM.Translate(float64(beerButton.x), float64(beerButton.y))
+
+	manWCButton := Button{
+		x:            screenWidth - 50,
+		y:            screenHeight - 250,
+		width:        40,
+		height:       40,
+		text:         "",
+		image:        manWCIconImg,
+		imageOptions: &ebiten.DrawImageOptions{},
+		mode:         ModeManWC,
+	}
+
+	manWCButton.imageOptions.GeoM.Scale(0.2, 0.2)
+	manWCButton.imageOptions.GeoM.Translate(float64(manWCButton.x), float64(manWCButton.y))
+
+	womanWCButton := Button{
+		x:            screenWidth - 50,
+		y:            screenHeight - 300,
+		width:        40,
+		height:       40,
+		text:         "",
+		image:        womanWCIconImg,
+		imageOptions: &ebiten.DrawImageOptions{},
+		mode:         ModeWomanWC,
+	}
+
+	womanWCButton.imageOptions.GeoM.Scale(0.2, 0.2)
+	womanWCButton.imageOptions.GeoM.Translate(float64(womanWCButton.x), float64(womanWCButton.y))
+
+	buttons = append(buttons, moveCursorButton, wallButton, eraseButton, beerButton, manWCButton, womanWCButton)
 }
 
 func DrawButtons(screen *ebiten.Image) {

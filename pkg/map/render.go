@@ -53,8 +53,163 @@ func (g *Game) Update() error {
 					exists = true
 				}
 			}
+			for _, beer := range g.Map.BarPoints {
+				if beer[0] == int(float32(x+g.CameraX)/10) && beer[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, ManWCtoilet := range g.Map.ManToiletPoints {
+				if ManWCtoilet[0] == int(float32(x+g.CameraX)/10) && ManWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, WomanWCtoilet := range g.Map.WomanToiletPoints {
+				if WomanWCtoilet[0] == int(float32(x+g.CameraX)/10) && WomanWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
 			if !exists {
 				g.Map.Walls = append(g.Map.Walls, [2]int{
+					int(float32(x+g.CameraX) / 10),
+					int(float32(y+g.CameraY) / 10),
+				})
+			}
+
+		}
+	}
+	// on click, add beer if beer mode
+	if g.CurrentMode == ModeBeer && !stopPropagation {
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			x, y := ebiten.CursorPosition()
+			// if wall,beer,toilet does not already exist at this position
+			exists := false
+			for _, wall := range g.Map.Walls {
+				if wall[0] == int(float32(x+g.CameraX)/10) && wall[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, beer := range g.Map.BarPoints {
+				if beer[0] == int(float32(x+g.CameraX)/10) && beer[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, ManWCtoilet := range g.Map.ManToiletPoints {
+				if ManWCtoilet[0] == int(float32(x+g.CameraX)/10) && ManWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, WomanWCtoilet := range g.Map.WomanToiletPoints {
+				if WomanWCtoilet[0] == int(float32(x+g.CameraX)/10) && WomanWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			if !exists {
+				g.Map.BarPoints = append(g.Map.BarPoints, [2]int{
+					int(float32(x+g.CameraX) / 10),
+					int(float32(y+g.CameraY) / 10),
+				})
+			}
+
+		}
+	}
+// on click, add beer if beer mode
+	if g.CurrentMode == ModeBeer && !stopPropagation {
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			x, y := ebiten.CursorPosition()
+			// if wall,beer,toilet does not already exist at this position
+			exists := false
+			for _, wall := range g.Map.Walls {
+				if wall[0] == int(float32(x+g.CameraX)/10) && wall[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, beer := range g.Map.BarPoints {
+				if beer[0] == int(float32(x+g.CameraX)/10) && beer[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, ManWCtoilet := range g.Map.ManToiletPoints {
+				if ManWCtoilet[0] == int(float32(x+g.CameraX)/10) && ManWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, WomanWCtoilet := range g.Map.WomanToiletPoints {
+				if WomanWCtoilet[0] == int(float32(x+g.CameraX)/10) && WomanWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			if !exists {
+				g.Map.BarPoints = append(g.Map.BarPoints, [2]int{
+					int(float32(x+g.CameraX) / 10),
+					int(float32(y+g.CameraY) / 10),
+				})
+			}
+
+		}
+	}
+	// on click, add ManToilet if manWC mode
+	if g.CurrentMode == ModeManWC && !stopPropagation {
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			x, y := ebiten.CursorPosition()
+			// if wall,beer,toilet does not already exist at this position
+			exists := false
+			for _, wall := range g.Map.Walls {
+				if wall[0] == int(float32(x+g.CameraX)/10) && wall[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, beer := range g.Map.BarPoints {
+				if beer[0] == int(float32(x+g.CameraX)/10) && beer[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, ManWCtoilet := range g.Map.ManToiletPoints {
+				if ManWCtoilet[0] == int(float32(x+g.CameraX)/10) && ManWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, WomanWCtoilet := range g.Map.WomanToiletPoints {
+				if WomanWCtoilet[0] == int(float32(x+g.CameraX)/10) && WomanWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			if !exists {
+				g.Map.ManToiletPoints = append(g.Map.ManToiletPoints, [2]int{
+					int(float32(x+g.CameraX) / 10),
+					int(float32(y+g.CameraY) / 10),
+				})
+			}
+
+		}
+	}	
+	// on click, add WomanToilet if womanWC mode
+	if g.CurrentMode == ModeWomanWC && !stopPropagation {
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			x, y := ebiten.CursorPosition()
+			// if wall,beer,toilet does not already exist at this position
+			exists := false
+			for _, wall := range g.Map.Walls {
+				if wall[0] == int(float32(x+g.CameraX)/10) && wall[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, beer := range g.Map.BarPoints {
+				if beer[0] == int(float32(x+g.CameraX)/10) && beer[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, ManWCtoilet := range g.Map.ManToiletPoints {
+				if ManWCtoilet[0] == int(float32(x+g.CameraX)/10) && ManWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			for _, WomanWCtoilet := range g.Map.WomanToiletPoints {
+				if WomanWCtoilet[0] == int(float32(x+g.CameraX)/10) && WomanWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					exists = true
+				}
+			}
+			if !exists {
+				g.Map.WomanToiletPoints = append(g.Map.WomanToiletPoints, [2]int{
 					int(float32(x+g.CameraX) / 10),
 					int(float32(y+g.CameraY) / 10),
 				})
@@ -66,10 +221,28 @@ func (g *Game) Update() error {
 	if g.CurrentMode == ModeErase && !stopPropagation {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			x, y := ebiten.CursorPosition()
-			// if wall does not already exist at this position
+			// if wall/Toilette/Beer does not already exist at this position
 			for i, wall := range g.Map.Walls {
 				if wall[0] == int(float32(x+g.CameraX)/10) && wall[1] == int(float32(y+g.CameraY)/10) {
 					g.Map.Walls = append(g.Map.Walls[:i], g.Map.Walls[i+1:]...)
+					break
+				}
+			}
+			for i, beer := range g.Map.BarPoints {
+				if beer[0] == int(float32(x+g.CameraX)/10) && beer[1] == int(float32(y+g.CameraY)/10) {
+					g.Map.BarPoints = append(g.Map.BarPoints[:i], g.Map.BarPoints[i+1:]...)
+					break
+				}
+			}
+			for i, ManWCtoilet := range g.Map.BarPoints {
+				if ManWCtoilet[0] == int(float32(x+g.CameraX)/10) && ManWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					g.Map.BarPoints = append(g.Map.ManToiletPoints[:i], g.Map.ManToiletPoints[i+1:]...)
+					break
+				}
+			}
+			for i, WomanWCtoilet := range g.Map.WomanToiletPoints {
+				if WomanWCtoilet[0] == int(float32(x+g.CameraX)/10) && WomanWCtoilet[1] == int(float32(y+g.CameraY)/10) {
+					g.Map.WomanToiletPoints = append(g.Map.WomanToiletPoints[:i], g.Map.WomanToiletPoints[i+1:]...)
 					break
 				}
 			}
@@ -128,6 +301,42 @@ func (g *Game) DrawMap(screen *ebiten.Image) {
 			10,
 			10,
 			color.Black,
+			false,
+		)
+	}
+	// draw beer
+	for _, beer := range g.Map.BarPoints {
+		vector.DrawFilledRect(
+			screen,
+			float32(beer[0])*10-float32(g.CameraX),
+			float32(beer[1])*10-float32(g.CameraY),
+			10,
+			10,
+			color.RGBA{R:201, G:201, B:0, A:255},
+			false,
+		)
+	}
+	// draw WC Woman
+	for _, WomanWC := range g.Map.WomanToiletPoints {
+		vector.DrawFilledRect(
+			screen,
+			float32(WomanWC[0])*10-float32(g.CameraX),
+			float32(WomanWC[1])*10-float32(g.CameraY),
+			10,
+			10,
+			color.RGBA{R:255, G:0, B:200, A:255},
+			false,
+		)
+	}
+	// draw WC Man
+	for _, ManWC := range g.Map.ManToiletPoints {
+		vector.DrawFilledRect(
+			screen,
+			float32(ManWC[0])*10-float32(g.CameraX),
+			float32(ManWC[1])*10-float32(g.CameraY),
+			10,
+			10,
+			color.RGBA{R:0, G:200, B:255, A:255},
 			false,
 		)
 	}

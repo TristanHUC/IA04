@@ -86,6 +86,7 @@ func (m *Map) SaveToFile(filename string) error {
 			isBar := false
 			isWomanToilet := false
 			isManToilet := false
+			isEmpty := true
 
 			//adding wall to the map
 			for _, wall := range m.Walls {
@@ -96,9 +97,8 @@ func (m *Map) SaveToFile(filename string) error {
 			}
 			if isWall {
 				f.Write([]byte{'w'})
-			} else {
-				f.Write([]byte{' '})
-			}
+				isEmpty = false
+			} 
 
 			//adding Bar to the map
 			for _, Bar := range m.BarPoints {
@@ -109,8 +109,7 @@ func (m *Map) SaveToFile(filename string) error {
 			}
 			if isBar {
 				f.Write([]byte{'b'})
-			} else {
-				f.Write([]byte{' '})
+				isEmpty = false
 			}
 
 			//adding WomanToilet to the map
@@ -122,9 +121,8 @@ func (m *Map) SaveToFile(filename string) error {
 			}
 			if isWomanToilet {
 				f.Write([]byte{'f'})
-			} else {
-				f.Write([]byte{' '})
-			}
+				isEmpty = false
+			} 
 
 			//adding ManToilet to the map
 			for _, ManToilet := range m.ManToiletPoints {
@@ -135,7 +133,9 @@ func (m *Map) SaveToFile(filename string) error {
 			}
 			if isManToilet {
 				f.Write([]byte{'m'})
-			} else {
+				isEmpty = false
+			} 
+			if isEmpty == true {
 				f.Write([]byte{' '})
 			}			
 			

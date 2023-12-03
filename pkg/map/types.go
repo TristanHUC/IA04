@@ -8,12 +8,18 @@ const (
 	ModeMove Mode = iota
 	ModeWall
 	ModeErase
+	ModeBeer
+	ModeManWC
+	ModeWomanWC
 )
 
 var modeToCursor = map[Mode]ebiten.CursorShapeType{
 	ModeMove:  ebiten.CursorShapeMove,
 	ModeWall:  ebiten.CursorShapeCrosshair,
 	ModeErase: ebiten.CursorShapeCrosshair,
+	ModeBeer: ebiten.CursorShapeCrosshair,
+	ModeManWC: ebiten.CursorShapeCrosshair,
+	ModeWomanWC: ebiten.CursorShapeCrosshair,
 }
 
 type Map struct {
