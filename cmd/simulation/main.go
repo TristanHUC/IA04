@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/ebitenui/ebitenui"
+	"github.com/ebitenui/ebitenui/image"
+	"github.com/ebitenui/ebitenui/widget"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	ebitenvector "github.com/hajimehoshi/ebiten/v2/vector"
 	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
@@ -41,12 +43,16 @@ type View struct {
 	draggingCameraPos     [2]int
 	CurrentMode           Mode
 	cameraZoom            float64
+	ui 					  *ebitenui.UI
 }
 
 var shownAgent int
 var mplusNormalFont font.Face
 
+var SimulationImage *ebiten.Image
+
 func (v *View) Update() error {
+	fmt.Println()
 	if v.CurrentMode == ModeMove {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			x, y := ebiten.CursorPosition()
@@ -103,19 +109,21 @@ func (v *View) Update() error {
 	v.cameraX += int(float64(x) * zoomChange)
 	v.cameraY += int(float64(y) * zoomChange)
 
+	v.ui.Update()
+
 	return nil
 }
 
 func (v *View) Draw(screen *ebiten.Image) {
 	// fill white
-	screen.Fill(colornames.White)
+	SimulationImage.Fill(colornames.White)
 
 	// write camera pos in top left corner
 	textToWrite := fmt.Sprintf("(%d, %d)", int(v.cameraX), int(v.cameraY))
 	//textWidth := font.MeasureString(mplusNormalFont, textToWrite).Round()
 	textHeight := mplusNormalFont.Metrics().Height.Round()
 	text.Draw(
-		screen,
+		SimulationImage,
 		textToWrite,
 		mplusNormalFont,
 		0,
@@ -133,16 +141,16 @@ func (v *View) Draw(screen *ebiten.Image) {
 	sizeX := float32(ScreenWidth/maxW) * float32(v.cameraZoom)
 	sizeY := float32(ScreenHeight/maxH) * float32(v.cameraZoom)
 	for _, wall := range v.sim.Environment.MapSparse.Walls {
-		ebitenvector.DrawFilledRect(screen, float32(wall[0])*sizeX-float32(v.cameraX), float32(wall[1])*sizeY-float32(v.cameraY), sizeX, sizeY, colornames.Black, false)
+		ebitenvector.DrawFilledRect(SimulationImage, float32(wall[0])*sizeX-float32(v.cameraX), float32(wall[1])*sizeY-float32(v.cameraY), sizeX, sizeY, colornames.Black, false)
 	}
 	for _, Beer := range v.sim.Environment.MapSparse.BarPoints {
-		ebitenvector.DrawFilledCircle(screen, float32(Beer[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Beer[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:201, G:201, B:0, A:255}, false)
+		ebitenvector.DrawFilledCircle(SimulationImage, float32(Beer[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Beer[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:201, G:201, B:0, A:255}, false)
 	}
 	for _, WomanWC := range v.sim.Environment.MapSparse.WomanToiletPoints {
-		ebitenvector.DrawFilledCircle(screen, float32(WomanWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(WomanWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:255, G:0, B:200, A:255}, false)
+		ebitenvector.DrawFilledCircle(SimulationImage, float32(WomanWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(WomanWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:255, G:0, B:200, A:255}, false)
 	}
 	for _, ManWC := range v.sim.Environment.MapSparse.ManToiletPoints {
-		ebitenvector.DrawFilledCircle(screen, float32(ManWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(ManWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:0, G:200, B:255, A:255}, false)
+		ebitenvector.DrawFilledCircle(SimulationImage, float32(ManWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(ManWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:0, G:200, B:255, A:255}, false)
 	}
 
 	// draw agents, their position and their goals
@@ -152,19 +160,15 @@ func (v *View) Draw(screen *ebiten.Image) {
 		if i == shownAgent {
 			color = colornames.Red
 		}
-		ebitenvector.DrawFilledCircle(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), sizeX/2, color, false)
-
-		if  i == shownAgent {
-			ebitenutil.DebugPrintAt(screen,"test", 200, 200)
-		}
+		ebitenvector.DrawFilledCircle(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), sizeX/2, color, false)
 
 		if v.sim.Environment.Agents[i].Path != nil && (v.showPaths || i == shownAgent) {
 			// draw red circle for goal (99,99)
-			ebitenvector.DrawFilledCircle(screen, float32(v.sim.Environment.Agents[i].Goal.GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Goal.GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), colornames.Red, false)
+			ebitenvector.DrawFilledCircle(SimulationImage, float32(v.sim.Environment.Agents[i].Goal.GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Goal.GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), colornames.Red, false)
 
 			// draw lines between all waypoints
 			for j := 0; j < len(v.sim.Environment.Agents[i].Path)-1; j++ {
-				ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].Path[j].GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Path[j].GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(v.sim.Environment.Agents[i].Path[j+1].GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Path[j+1].GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(1*v.cameraZoom), colornames.Green, false)
+				ebitenvector.StrokeLine(SimulationImage, float32(v.sim.Environment.Agents[i].Path[j].GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Path[j].GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(v.sim.Environment.Agents[i].Path[j+1].GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Path[j+1].GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(1*v.cameraZoom), colornames.Green, false)
 			}
 
 			// draw line between agent's projection upon the line between the last waypoint and the next waypoint and the next waypoint
@@ -187,6 +191,11 @@ func (v *View) Draw(screen *ebiten.Image) {
 			//ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2, float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2, float32(currentWayPoint.GetCol())*sizeX+sizeX/2, float32(currentWayPoint.GetRow())*sizeY+sizeY/2, 1, colornames.Green, false)
 		}
 
+		if  i == shownAgent {
+
+			textarea.SetText("bière bu : 0\n\n pisse : 0")
+		}
+
 		// draw line between agent and walls that affect it
 		if v.showWallInteractions || i == shownAgent {
 			for _, mur := range v.sim.Environment.MapSparse.Walls {
@@ -194,7 +203,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 				if normeEucli < 5 {
 					color := colornames.Blue
 					color.A = 50
-					ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), float32(mur[0])*sizeX+sizeX/2-float32(v.cameraX), float32(mur[1])*sizeY+sizeY/2-float32(v.cameraY), float32(1*v.cameraZoom), color, false)
+					ebitenvector.StrokeLine(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), float32(mur[0])*sizeX+sizeX/2-float32(v.cameraX), float32(mur[1])*sizeY+sizeY/2-float32(v.cameraY), float32(1*v.cameraZoom), color, false)
 				}
 			}
 		}
@@ -206,20 +215,32 @@ func (v *View) Draw(screen *ebiten.Image) {
 				if normeEucli < 5 {
 					color := colornames.Red
 					color.A = 50
-					ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), float32(otherAgent.X)*sizeX+sizeX/2-float32(v.cameraX), float32(otherAgent.Y)*sizeY+sizeY/2-float32(v.cameraY), float32(1*v.cameraZoom), color, false)
+					ebitenvector.StrokeLine(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), float32(otherAgent.X)*sizeX+sizeX/2-float32(v.cameraX), float32(otherAgent.Y)*sizeY+sizeY/2-float32(v.cameraY), float32(1*v.cameraZoom), color, false)
 				}
 			}
 		}
 	}
+
+	nineSliceImage := image.NewNineSlice(SimulationImage, [3]int{0, SimulationImage.Bounds().Dx(), 0}, [3]int{0, SimulationImage.Bounds().Dy(), 0})
+	//fmt.Println(nineSliceImage)
+	rootContainer.BackgroundImage = nineSliceImage
+
+	v.ui.Draw(screen)
+
 }
 
 func (v *View) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return ScreenWidth, ScreenHeight
 }
 
+var rootContainer *widget.Container
+var textarea *widget.TextArea
+
 func main() {
 	ebiten.SetWindowSize(ScreenWidth, ScreenHeight)
 	ebiten.SetWindowTitle("Pic")
+
+	SimulationImage = ebiten.NewImage(ScreenWidth, ScreenHeight)
 
 	// load font
 	tt, err := opentype.Parse(fonts.MPlus1pRegular_ttf)
@@ -272,9 +293,77 @@ func main() {
 		NAgents:     nAgents,
 	}
 
+	// Create the rootContainer with the NineSlice image as the background
+	rootContainer = widget.NewContainer(
+		widget.ContainerOpts.BackgroundImage(image.NewNineSliceColor(color.NRGBA{0x13, 0x1a, 0x22, 0xff})), // Set NineSlice image as the background
+	
+		// the container will use an anchor layout to layout its single child widget
+		widget.ContainerOpts.Layout(widget.NewRowLayout(
+			widget.RowLayoutOpts.Padding(widget.NewInsetsSimple(30)),
+			widget.RowLayoutOpts.Direction(widget.DirectionVertical),
+		)),
+	)
+
+	// construct a textarea
+	textarea = widget.NewTextArea(
+		widget.TextAreaOpts.ContainerOpts(
+			widget.ContainerOpts.WidgetOpts(
+				//Set the layout data for the textarea
+				//including a max height to ensure the scroll bar is visible
+				widget.WidgetOpts.LayoutData(widget.RowLayoutData{
+					Position: widget.RowLayoutPositionStart,
+					MaxWidth:  150,
+					MaxHeight: 150,
+				}),
+				//Set the minimum size for the widget
+				widget.WidgetOpts.MinSize(150, 150),
+			),
+		),
+		//Set the font color
+		widget.TextAreaOpts.FontColor(color.RGBA{R:201, G:201, B:0, A:255}),
+		//Set the font face (size) to use
+		widget.TextAreaOpts.FontFace(mplusNormalFont),
+
+		widget.TextAreaOpts.Text("Beer level : 0\n piss level : 0"),
+		//Tell the TextArea to show the vertical scrollbar
+		widget.TextAreaOpts.ShowVerticalScrollbar(),
+		//Set padding between edge of the widget and where the text is drawn
+		widget.TextAreaOpts.TextPadding(widget.NewInsetsSimple(5)),
+		//This sets the background images for the scroll container
+		widget.TextAreaOpts.ScrollContainerOpts(
+			widget.ScrollContainerOpts.Image(&widget.ScrollContainerImage{
+				Idle: image.NewNineSliceColor(color.NRGBA{157, 157, 157, 255}),
+				Mask: image.NewNineSliceColor(color.NRGBA{100, 100, 100, 255}),
+			}),
+		),
+		//This sets the images to use for the sliders
+		widget.TextAreaOpts.SliderOpts(
+			widget.SliderOpts.Images(
+				// Set the track images
+				&widget.SliderTrackImage{
+					Idle:  image.NewNineSliceColor(color.NRGBA{100, 100, 100, 255}),
+					Hover: image.NewNineSliceColor(color.NRGBA{200, 200, 200, 255}),
+				},
+				// Set the handle images
+				&widget.ButtonImage{
+					Idle:    image.NewNineSliceColor(color.NRGBA{90, 90, 90, 255}),
+					Hover:   image.NewNineSliceColor(color.NRGBA{90, 90, 90, 255}),
+					Pressed: image.NewNineSliceColor(color.NRGBA{80, 80, 80, 255}),
+				},
+			),
+		),
+	)
+	// add the textarea as a child of the container
+	rootContainer.AddChild(textarea)
+
+	ui := ebitenui.UI{
+		Container: rootContainer,
+	}
+
 	view := View{
 		sim:        &sim,
 		cameraZoom: 1,
+		ui: 		&ui,
 	}
 
 	sim.Start()
@@ -284,6 +373,7 @@ func main() {
 	fmt.Println(" - W: toggle showing wall interactions")
 	fmt.Println(" - A: toggle showing agent interactions")
 	fmt.Println(" - P: toggle showing paths")
+
 
 	// Call ebiten.RunGame to start your game loop.
 	if err := ebiten.RunGame(&view); err != nil {
