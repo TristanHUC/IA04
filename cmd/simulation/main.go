@@ -250,7 +250,7 @@ func main() {
 		testMapDense[wall[1]][wall[0]] = 1
 	}
 
-	nAgents := 200
+	nAgents := 300
 
 	env := simulation.NewEnvironment(testmap, testMapDense, nAgents)
 	sim := simulation.Simulation{

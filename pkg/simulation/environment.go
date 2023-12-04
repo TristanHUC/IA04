@@ -20,7 +20,7 @@ func NewEnvironment(sparseMap _map.Map, denseMap [][]uint8, nAgents int) *Enviro
 	}
 	for i := 0; i < nAgents; i++ {
 		x, y := GenerateValidCoordinates(sparseMap.Walls, sparseMap.Width, sparseMap.Height)
-		env.Agents[i] = NewAgent(float64(x), float64(y), 99, 99, denseMap, &sparseMap, env.PerceptChannel)
+		env.Agents[i] = NewAgent(float64(x), float64(y), denseMap, &sparseMap, env.PerceptChannel)
 	}
 	return &env
 }
