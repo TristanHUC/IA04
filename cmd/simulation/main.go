@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	ebitenvector "github.com/hajimehoshi/ebiten/v2/vector"
 	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
@@ -136,13 +136,13 @@ func (v *View) Draw(screen *ebiten.Image) {
 		ebitenvector.DrawFilledRect(screen, float32(wall[0])*sizeX-float32(v.cameraX), float32(wall[1])*sizeY-float32(v.cameraY), sizeX, sizeY, colornames.Black, false)
 	}
 	for _, Beer := range v.sim.Environment.MapSparse.BarPoints {
-		ebitenvector.DrawFilledCircle(screen, float32(Beer[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Beer[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:201, G:201, B:0, A:255}, false)
+		ebitenvector.DrawFilledCircle(screen, float32(Beer[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Beer[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 201, G: 201, B: 0, A: 255}, false)
 	}
 	for _, WomanWC := range v.sim.Environment.MapSparse.WomanToiletPoints {
-		ebitenvector.DrawFilledCircle(screen, float32(WomanWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(WomanWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:255, G:0, B:200, A:255}, false)
+		ebitenvector.DrawFilledCircle(screen, float32(WomanWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(WomanWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 255, G: 0, B: 200, A: 255}, false)
 	}
 	for _, ManWC := range v.sim.Environment.MapSparse.ManToiletPoints {
-		ebitenvector.DrawFilledCircle(screen, float32(ManWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(ManWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:0, G:200, B:255, A:255}, false)
+		ebitenvector.DrawFilledCircle(screen, float32(ManWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(ManWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 0, G: 200, B: 255, A: 255}, false)
 	}
 
 	// draw agents, their position and their goals
@@ -154,8 +154,8 @@ func (v *View) Draw(screen *ebiten.Image) {
 		}
 		ebitenvector.DrawFilledCircle(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), sizeX/2, color, false)
 
-		if  i == shownAgent {
-			ebitenutil.DebugPrintAt(screen,"test", 200, 200)
+		if i == shownAgent {
+			ebitenutil.DebugPrintAt(screen, "test", 200, 200)
 		}
 
 		if v.sim.Environment.Agents[i].Path != nil && (v.showPaths || i == shownAgent) {
@@ -264,7 +264,7 @@ func main() {
 		testMapDense[wall[1]][wall[0]] = 1
 	}
 
-	nAgents := 300
+	nAgents := 100
 
 	env := simulation.NewEnvironment(testmap, testMapDense, nAgents)
 	sim := simulation.Simulation{
