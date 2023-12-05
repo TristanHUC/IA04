@@ -50,7 +50,7 @@ func NewAgent(xStart, yStart float64, picMapDense [][]uint8, picMapSparse *_map.
 		X:                 xStart,
 		Y:                 yStart,
 		speed:             float64(rand.Intn(1)+1) / 20,
-		reactivity:        2,
+		reactivity:        0.1,
 		controllable:      true,
 		channelAgent:      make(chan []*Agent, 1),
 		perceptChannel:    perceptChannel,
@@ -192,25 +192,6 @@ func (a *Agent) calculatePosition() error {
 		a.vx += (gvx - a.vx) * a.reactivity
 		a.vy += (gvy - a.vy) * a.reactivity
 
-		//prise en compte des murs
-		var vectx, vecty, normeEucli, reactionMurX, reactionMurY float64
-		listeMur := a.picMapSparse.Walls
-		for _, mur := range listeMur {
-			vectx = float64(mur[0]) + 0.5 - a.X
-			vecty = float64(mur[1]) + 0.5 - a.Y
-			normeEucli = math.Sqrt((float64(mur[0])+0.5-a.X)*(float64(mur[0])+0.5-a.X) + (float64(mur[1])+0.5-a.Y)*(float64(mur[1])+0.5-a.Y))
-
-			vectx = vectx / normeEucli
-			vecty = vecty / normeEucli
-
-			reactionMurX = vectx * (100 * math.Exp(-(normeEucli-0.7)/0.15))
-			reactionMurY = vecty * (100 * math.Exp(-(normeEucli-0.7)/0.15))
-
-			a.vx -= reactionMurX
-			a.vy -= reactionMurY
-
-		}
-
 		// change velocity to avoid other agents following moussaïd 2009
 		var closeAgents []*Agent
 		a.perceptChannel <- PerceptRequest{Agt: a, ResponseChannel: a.channelAgent}
@@ -221,10 +202,11 @@ func (a *Agent) calculatePosition() error {
 			gamma := 0.2
 			n := 2.0
 			np := 3.0
-			factor := 0.7
+			factor := 1.0
 
 			// pour ne pas recalculer la distance on pourrait la passer dans le channel via un dictionnaire ? A discuter
 			dist := math.Sqrt((a.X*factor-otherAgent.X*factor)*(a.X*factor-otherAgent.X*factor) + (a.Y*factor-otherAgent.Y*factor)*(a.Y*factor-otherAgent.Y*factor))
+			//fmt.Println("dist", dist)
 
 			ex := (otherAgent.X*factor - a.X*factor) / dist
 			ey := (otherAgent.Y*factor - a.Y*factor) / dist
@@ -245,11 +227,29 @@ func (a *Agent) calculatePosition() error {
 
 			a.vx += addedToVX
 			a.vy += addedToVY
+		}
+
+		//prise en compte des murs
+		var vectx, vecty, normeEucli, reactionMurX, reactionMurY float64
+		listeMur := a.picMapSparse.Walls
+		for _, mur := range listeMur {
+			vectx = float64(mur[0]) + 0.5 - a.X
+			vecty = float64(mur[1]) + 0.5 - a.Y
+			normeEucli = math.Sqrt(vectx*vectx + vecty*vecty)
+
+			vectx = vectx / normeEucli
+			vecty = vecty / normeEucli
+
+			reactionMurX = vectx * (3e5 * math.Exp(-(normeEucli+0.5)/0.1))
+			reactionMurY = vecty * (3e5 * math.Exp(-(normeEucli+0.5)/0.1))
+
+			a.vx -= reactionMurX
+			a.vy -= reactionMurY
 
 		}
 
-		// safeguard against too big values
-		if norm := math.Sqrt(a.vx*a.vx + a.vy*a.vy); norm > a.speed {
+		//safeguard against too big values
+		if norm := math.Sqrt(a.vx*a.vx + a.vy*a.vy); norm > a.speed*1.5 {
 			a.vx = a.vx / norm * a.speed
 			a.vy = a.vy / norm * a.speed
 		}
