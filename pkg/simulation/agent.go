@@ -33,10 +33,10 @@ type Agent struct {
 	picMapSparse                            *_map.Map
 	rollingMeanMovement                     float64
 	lastExecutionTime                       time.Time
-	drinkContents                           float64
+	DrinkContents                           float64
 	timeBetweenDrinks                       time.Duration
 	drinkEmptyTime                          time.Time
-	bladderContents                         float64
+	BladderContents                         float64
 	action                                  Action
 }
 
@@ -57,10 +57,10 @@ func NewAgent(xStart, yStart float64, picMapDense [][]uint8, picMapSparse *_map.
 		picMapDense:       picMapDense,
 		picMapSparse:      picMapSparse,
 		lastExecutionTime: time.Now(),
-		drinkContents:     0, // in milliliters
+		DrinkContents:     0, // in milliliters
 		timeBetweenDrinks: time.Duration(rand.Intn(10)+10) * time.Second,
 		drinkEmptyTime:    time.Now(),
-		bladderContents:   0, // in milliliters
+		BladderContents:   0, // in milliliters
 		action:            None,
 	}
 }
@@ -121,11 +121,11 @@ func (a *Agent) Act() {
 		a.Goal = nil
 		a.Goal = nil
 		if a.action == GoToToilet {
-			a.bladderContents = 0
+			a.BladderContents = 0
 			a.action = None
 		}
 		if a.action == GoToBar {
-			a.drinkContents = 330
+			a.DrinkContents = 330
 			a.drinkEmptyTime = time.Time{}
 			a.action = None
 		}
@@ -133,9 +133,9 @@ func (a *Agent) Act() {
 }
 
 func (a *Agent) Drink() {
-	if a.drinkContents >= 0.01 {
-		a.drinkContents -= 0.01
-		a.bladderContents += 0.01
+	if a.DrinkContents >= 0.01 {
+		a.DrinkContents -= 0.01
+		a.BladderContents += 0.01
 	} else if a.drinkEmptyTime.IsZero() {
 		// if drink just finished, set time
 		a.drinkEmptyTime = time.Now()
@@ -146,7 +146,7 @@ func (a *Agent) Reflect() {
 	if a.action != None { // doucement cabron, une action à la fois
 		return
 	}
-	if a.bladderContents > 450 {
+	if a.BladderContents > 450 {
 		// go to toilet
 		a.action = GoToToilet
 	}

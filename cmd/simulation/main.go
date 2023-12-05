@@ -6,6 +6,7 @@ import (
 	"github.com/ebitenui/ebitenui/image"
 	"github.com/ebitenui/ebitenui/widget"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
@@ -43,13 +44,26 @@ type View struct {
 	draggingCameraPos     [2]int
 	CurrentMode           Mode
 	cameraZoom            float64
-	ui 					  *ebitenui.UI
+	ui                    *ebitenui.UI
 }
 
-var shownAgent int
-var mplusNormalFont font.Face
+var (
+	shownAgent         int
+	mplusNormalFont    font.Face
+	rootContainer      *widget.Container
+	textarea           *widget.TextArea
+	openButton         *widget.Button
+	isOpen             bool = true
+	FullBeerImg        *ebiten.Image
+	EmptyBeerImg       *ebiten.Image
+	OneOfFiveBeerImg   *ebiten.Image
+	TwoOfFiveBeerImg   *ebiten.Image
+	ThreeOfFiveBeerImg *ebiten.Image
+	FourOfFiveBeerImg  *ebiten.Image
 
-var SimulationImage *ebiten.Image
+	testMapDense    [][]uint8
+	SimulationImage *ebiten.Image
+)
 
 func (v *View) Update() error {
 	fmt.Println()
@@ -144,21 +158,39 @@ func (v *View) Draw(screen *ebiten.Image) {
 		ebitenvector.DrawFilledRect(SimulationImage, float32(wall[0])*sizeX-float32(v.cameraX), float32(wall[1])*sizeY-float32(v.cameraY), sizeX, sizeY, colornames.Black, false)
 	}
 	for _, Beer := range v.sim.Environment.MapSparse.BarPoints {
-		ebitenvector.DrawFilledCircle(SimulationImage, float32(Beer[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Beer[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:201, G:201, B:0, A:255}, false)
+		ebitenvector.DrawFilledCircle(SimulationImage, float32(Beer[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Beer[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 201, G: 201, B: 0, A: 255}, false)
 	}
 	for _, WomanWC := range v.sim.Environment.MapSparse.WomanToiletPoints {
-		ebitenvector.DrawFilledCircle(SimulationImage, float32(WomanWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(WomanWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:255, G:0, B:200, A:255}, false)
+		ebitenvector.DrawFilledCircle(SimulationImage, float32(WomanWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(WomanWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 255, G: 0, B: 200, A: 255}, false)
 	}
 	for _, ManWC := range v.sim.Environment.MapSparse.ManToiletPoints {
-		ebitenvector.DrawFilledCircle(SimulationImage, float32(ManWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(ManWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R:0, G:200, B:255, A:255}, false)
+		ebitenvector.DrawFilledCircle(SimulationImage, float32(ManWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(ManWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 0, G: 200, B: 255, A: 255}, false)
 	}
 
 	// draw agents, their position and their goals
 	for i := 0; i < v.sim.NAgents; i++ {
 		// draw agent
 		color := colornames.Blue
+
 		if i == shownAgent {
 			color = colornames.Red
+			textarea.SetText(fmt.Sprintf("verre actuel : %.2f \n\n vessie :%.2f ", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents))
+			opts := &ebiten.DrawImageOptions{}
+			opts.GeoM.Translate(v.sim.Environment.Agents[i].X*float64(sizeX)+7, v.sim.Environment.Agents[i].Y*float64(sizeY))
+			switch {
+			case v.sim.Environment.Agents[i].DrinkContents == 0:
+				SimulationImage.DrawImage(EmptyBeerImg, opts)
+			case v.sim.Environment.Agents[i].DrinkContents > 0 && v.sim.Environment.Agents[i].DrinkContents < 66:
+				SimulationImage.DrawImage(OneOfFiveBeerImg, opts)
+			case v.sim.Environment.Agents[i].DrinkContents >= 66 && v.sim.Environment.Agents[i].DrinkContents < 132:
+				SimulationImage.DrawImage(TwoOfFiveBeerImg, opts)
+			case v.sim.Environment.Agents[i].DrinkContents >= 132 && v.sim.Environment.Agents[i].DrinkContents < 198:
+				SimulationImage.DrawImage(ThreeOfFiveBeerImg, opts)
+			case v.sim.Environment.Agents[i].DrinkContents >= 198 && v.sim.Environment.Agents[i].DrinkContents < 264:
+				SimulationImage.DrawImage(FourOfFiveBeerImg, opts)
+			case v.sim.Environment.Agents[i].DrinkContents >= 264:
+				SimulationImage.DrawImage(FullBeerImg, opts)
+			}
 		}
 		ebitenvector.DrawFilledCircle(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), sizeX/2, color, false)
 
@@ -191,11 +223,6 @@ func (v *View) Draw(screen *ebiten.Image) {
 			//ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2, float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2, float32(currentWayPoint.GetCol())*sizeX+sizeX/2, float32(currentWayPoint.GetRow())*sizeY+sizeY/2, 1, colornames.Green, false)
 		}
 
-		if  i == shownAgent {
-
-			textarea.SetText("bière bu : 0\n\n pisse : 0")
-		}
-
 		// draw line between agent and walls that affect it
 		if v.showWallInteractions || i == shownAgent {
 			for _, mur := range v.sim.Environment.MapSparse.Walls {
@@ -221,8 +248,8 @@ func (v *View) Draw(screen *ebiten.Image) {
 		}
 	}
 
+	//add the simulation in the background
 	nineSliceImage := image.NewNineSlice(SimulationImage, [3]int{0, SimulationImage.Bounds().Dx(), 0}, [3]int{0, SimulationImage.Bounds().Dy(), 0})
-	//fmt.Println(nineSliceImage)
 	rootContainer.BackgroundImage = nineSliceImage
 
 	v.ui.Draw(screen)
@@ -233,14 +260,18 @@ func (v *View) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 	return ScreenWidth, ScreenHeight
 }
 
-var rootContainer *widget.Container
-var textarea *widget.TextArea
-
 func main() {
 	ebiten.SetWindowSize(ScreenWidth, ScreenHeight)
 	ebiten.SetWindowTitle("Pic")
 
 	SimulationImage = ebiten.NewImage(ScreenWidth, ScreenHeight)
+
+	FullBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/BeerFull.png")
+	EmptyBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/BeerEmpty.png")
+	OneOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer1Of5.png")
+	TwoOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer2Of5.png")
+	ThreeOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer3Of5.png")
+	FourOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer4Of5.png")
 
 	// load font
 	tt, err := opentype.Parse(fonts.MPlus1pRegular_ttf)
@@ -254,6 +285,7 @@ func main() {
 		DPI:     dpi,
 		Hinting: font.HintingVertical,
 	})
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -277,7 +309,6 @@ func main() {
 	}
 	maxW++
 	maxH++
-	var testMapDense [][]uint8
 	for i := 0; i < maxH; i++ {
 		testMapDense = append(testMapDense, make([]uint8, maxW))
 	}
@@ -296,14 +327,12 @@ func main() {
 	// Create the rootContainer with the NineSlice image as the background
 	rootContainer = widget.NewContainer(
 		widget.ContainerOpts.BackgroundImage(image.NewNineSliceColor(color.NRGBA{0x13, 0x1a, 0x22, 0xff})), // Set NineSlice image as the background
-	
+
 		// the container will use an anchor layout to layout its single child widget
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
-			widget.RowLayoutOpts.Padding(widget.NewInsetsSimple(30)),
 			widget.RowLayoutOpts.Direction(widget.DirectionVertical),
 		)),
 	)
-
 	// construct a textarea
 	textarea = widget.NewTextArea(
 		widget.TextAreaOpts.ContainerOpts(
@@ -311,7 +340,7 @@ func main() {
 				//Set the layout data for the textarea
 				//including a max height to ensure the scroll bar is visible
 				widget.WidgetOpts.LayoutData(widget.RowLayoutData{
-					Position: widget.RowLayoutPositionStart,
+					Position:  widget.RowLayoutPositionStart,
 					MaxWidth:  150,
 					MaxHeight: 150,
 				}),
@@ -320,10 +349,9 @@ func main() {
 			),
 		),
 		//Set the font color
-		widget.TextAreaOpts.FontColor(color.RGBA{R:201, G:201, B:0, A:255}),
+		widget.TextAreaOpts.FontColor(color.RGBA{R: 255, G: 255, B: 255, A: 255}),
 		//Set the font face (size) to use
 		widget.TextAreaOpts.FontFace(mplusNormalFont),
-
 		widget.TextAreaOpts.Text("Beer level : 0\n piss level : 0"),
 		//Tell the TextArea to show the vertical scrollbar
 		widget.TextAreaOpts.ShowVerticalScrollbar(),
@@ -332,8 +360,8 @@ func main() {
 		//This sets the background images for the scroll container
 		widget.TextAreaOpts.ScrollContainerOpts(
 			widget.ScrollContainerOpts.Image(&widget.ScrollContainerImage{
-				Idle: image.NewNineSliceColor(color.NRGBA{157, 157, 157, 255}),
-				Mask: image.NewNineSliceColor(color.NRGBA{100, 100, 100, 255}),
+				Idle: image.NewNineSliceColor(color.NRGBA{157, 157, 157, 230}),
+				Mask: image.NewNineSliceColor(color.NRGBA{100, 100, 100, 230}),
 			}),
 		),
 		//This sets the images to use for the sliders
@@ -341,19 +369,42 @@ func main() {
 			widget.SliderOpts.Images(
 				// Set the track images
 				&widget.SliderTrackImage{
-					Idle:  image.NewNineSliceColor(color.NRGBA{100, 100, 100, 255}),
-					Hover: image.NewNineSliceColor(color.NRGBA{200, 200, 200, 255}),
+					Idle:  image.NewNineSliceColor(color.NRGBA{100, 100, 100, 230}),
+					Hover: image.NewNineSliceColor(color.NRGBA{200, 200, 200, 230}),
 				},
 				// Set the handle images
 				&widget.ButtonImage{
-					Idle:    image.NewNineSliceColor(color.NRGBA{90, 90, 90, 255}),
-					Hover:   image.NewNineSliceColor(color.NRGBA{90, 90, 90, 255}),
-					Pressed: image.NewNineSliceColor(color.NRGBA{80, 80, 80, 255}),
+					Idle:    image.NewNineSliceColor(color.NRGBA{190, 190, 190, 200}),
+					Hover:   image.NewNineSliceColor(color.NRGBA{140, 140, 140, 200}),
+					Pressed: image.NewNineSliceColor(color.NRGBA{140, 140, 140, 200}),
 				},
 			),
 		),
 	)
+	buttonImage := simulation.LoadButtonImage()
+	openButton = widget.NewButton(
+		widget.ButtonOpts.Image(buttonImage),
+		widget.ButtonOpts.Text(" X ", mplusNormalFont, &widget.ButtonTextColor{
+			Idle: color.NRGBA{0xdf, 0xf4, 0xff, 0xff},
+		}),
+		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
+			isOpen = !isOpen
+			if isOpen {
+				rootContainer.AddChild(textarea)
+			} else {
+				rootContainer.RemoveChild(textarea)
+			}
+		}),
+		widget.ButtonOpts.WidgetOpts(
+			// instruct the container's anchor layout to center the button both horizontally and vertically
+			widget.WidgetOpts.LayoutData(widget.AnchorLayoutData{
+				HorizontalPosition: widget.AnchorLayoutPositionCenter,
+				VerticalPosition:   widget.AnchorLayoutPositionCenter,
+			}),
+		),
+	)
 	// add the textarea as a child of the container
+	rootContainer.AddChild(openButton)
 	rootContainer.AddChild(textarea)
 
 	ui := ebitenui.UI{
@@ -363,7 +414,7 @@ func main() {
 	view := View{
 		sim:        &sim,
 		cameraZoom: 1,
-		ui: 		&ui,
+		ui:         &ui,
 	}
 
 	sim.Start()
@@ -373,7 +424,6 @@ func main() {
 	fmt.Println(" - W: toggle showing wall interactions")
 	fmt.Println(" - A: toggle showing agent interactions")
 	fmt.Println(" - P: toggle showing paths")
-
 
 	// Call ebiten.RunGame to start your game loop.
 	if err := ebiten.RunGame(&view); err != nil {
