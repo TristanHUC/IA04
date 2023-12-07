@@ -90,6 +90,19 @@ func (v *View) Update() error {
 		v.showPaths = !v.showPaths
 	}
 
+	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+		v.sim.Environment.Agents[shownAgent].Y -= 0.1
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+		v.sim.Environment.Agents[shownAgent].Y += 0.1
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+		v.sim.Environment.Agents[shownAgent].X -= 0.1
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+		v.sim.Environment.Agents[shownAgent].X += 0.1
+	}
+
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
 		maxW := v.sim.Environment.MapSparse.Width
@@ -123,6 +136,10 @@ func (v *View) Update() error {
 	v.cameraY += int(float64(y) * zoomChange)
 
 	v.ui.Update()
+
+	//agt := v.sim.Environment.Agents[shownAgent]
+	// print drink and bladder contents
+	//fmt.Printf("Drink: %f, Bladder: %f, Blood alcohol: g/L\n", agt.DrinkContents, agt.BladderContents, agt.BloodAlcoholLevel)
 
 	return nil
 }
