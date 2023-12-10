@@ -65,10 +65,14 @@ var (
 	ThreeOfFiveBeerImg  *ebiten.Image
 	FourOfFiveBeerImg   *ebiten.Image
 
-	spriteSheet *ebiten.Image
-
-	testMapDense    [][]uint8
-	SimulationImage *ebiten.Image
+	spriteSheet      *ebiten.Image
+	groundImg        *ebiten.Image
+	leftGroundImg    *ebiten.Image
+	topGroundImg     *ebiten.Image
+	topLeftGroundImg *ebiten.Image
+	cornerGroundImg  *ebiten.Image
+	testMapDense     [][]uint8
+	SimulationImage  *ebiten.Image
 )
 
 func (v *View) Update() error {
@@ -176,9 +180,32 @@ func (v *View) Draw(screen *ebiten.Image) {
 	maxH := v.sim.Environment.MapSparse.Height
 	sizeX := float32(ScreenWidth/maxW) * float32(v.cameraZoom)
 	sizeY := float32(ScreenHeight/maxH) * float32(v.cameraZoom)
+	// draw ground
+	for i := 0; i < maxH; i++ {
+		for j := 0; j < maxW; j++ {
+			options := &ebiten.DrawImageOptions{}
+			options.GeoM.Scale(float64(sizeX)/float64(groundImg.Bounds().Dx()), float64(sizeY)/float64(groundImg.Bounds().Dy()))
+			options.GeoM.Translate(float64(j)*float64(sizeX)-float64(v.cameraX), float64(i)*float64(sizeY)-float64(v.cameraY))
+			if i > 0 && v.sim.Environment.MapDense[i-1][j] == 1 {
+				if j > 0 && v.sim.Environment.MapDense[i][j-1] == 1 {
+					SimulationImage.DrawImage(topLeftGroundImg, options)
+				} else {
+					SimulationImage.DrawImage(topGroundImg, options)
+				}
+			} else if j > 0 && v.sim.Environment.MapDense[i][j-1] == 1 {
+				SimulationImage.DrawImage(leftGroundImg, options)
+			} else if i > 0 && j > 0 && v.sim.Environment.MapDense[i-1][j-1] == 1 {
+				SimulationImage.DrawImage(cornerGroundImg, options)
+			} else {
+				SimulationImage.DrawImage(groundImg, options)
+			}
+		}
+	}
+	// draw walls
 	for _, wall := range v.sim.Environment.MapSparse.Walls {
 		ebitenvector.DrawFilledRect(SimulationImage, float32(wall[0])*sizeX-float32(v.cameraX), float32(wall[1])*sizeY-float32(v.cameraY), sizeX, sizeY, colornames.Black, false)
 	}
+	// draw bar spots and toilet spots
 	for _, Beer := range v.sim.Environment.MapSparse.BarPoints {
 		ebitenvector.DrawFilledCircle(SimulationImage, float32(Beer[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Beer[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 201, G: 201, B: 0, A: 255}, false)
 	}
@@ -300,6 +327,11 @@ func init() {
 	FourOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer4Of5.png")
 
 	spriteSheet, _, _ = ebitenutil.NewImageFromFile("assets/spritesheet.png")
+	groundImg, _, _ = ebitenutil.NewImageFromFile("assets/ground.png")
+	leftGroundImg, _, _ = ebitenutil.NewImageFromFile("assets/ground_left.png")
+	topGroundImg, _, _ = ebitenutil.NewImageFromFile("assets/ground_top.png")
+	topLeftGroundImg, _, _ = ebitenutil.NewImageFromFile("assets/ground_top_left.png")
+	cornerGroundImg, _, _ = ebitenutil.NewImageFromFile("assets/ground_corner.png")
 }
 
 func main() {
