@@ -16,6 +16,7 @@ import (
 	"golang.org/x/image/colornames"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
+	goimage "image"
 	"image/color"
 	"log"
 	"math"
@@ -48,18 +49,23 @@ type View struct {
 }
 
 var (
-	shownAgent         int
-	mplusNormalFont    font.Face
-	rootContainer      *widget.Container
-	textarea           *widget.TextArea
-	openButton         *widget.Button
-	isOpen             bool = true
-	FullBeerImg        *ebiten.Image
-	EmptyBeerImg       *ebiten.Image
-	OneOfFiveBeerImg   *ebiten.Image
-	TwoOfFiveBeerImg   *ebiten.Image
-	ThreeOfFiveBeerImg *ebiten.Image
-	FourOfFiveBeerImg  *ebiten.Image
+	shownAgent          int
+	agentAnimations     [7][8][3]*ebiten.Image // character models * n°directions * animation steps
+	agentAnimationSteps []float64
+	agentLastDirections []int
+	mplusNormalFont     font.Face
+	rootContainer       *widget.Container
+	textarea            *widget.TextArea
+	openButton          *widget.Button
+	isOpen              bool = true
+	FullBeerImg         *ebiten.Image
+	EmptyBeerImg        *ebiten.Image
+	OneOfFiveBeerImg    *ebiten.Image
+	TwoOfFiveBeerImg    *ebiten.Image
+	ThreeOfFiveBeerImg  *ebiten.Image
+	FourOfFiveBeerImg   *ebiten.Image
+
+	spriteSheet *ebiten.Image
 
 	testMapDense    [][]uint8
 	SimulationImage *ebiten.Image
@@ -91,16 +97,16 @@ func (v *View) Update() error {
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-		v.sim.Environment.Agents[shownAgent].Y -= 0.1
+		v.sim.Environment.Agents[shownAgent].Vy = -v.sim.Environment.Agents[shownAgent].Speed
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-		v.sim.Environment.Agents[shownAgent].Y += 0.1
+		v.sim.Environment.Agents[shownAgent].Vy = v.sim.Environment.Agents[shownAgent].Speed
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		v.sim.Environment.Agents[shownAgent].X -= 0.1
+		v.sim.Environment.Agents[shownAgent].Vx = -v.sim.Environment.Agents[shownAgent].Speed
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		v.sim.Environment.Agents[shownAgent].X += 0.1
+		v.sim.Environment.Agents[shownAgent].Vx = v.sim.Environment.Agents[shownAgent].Speed
 	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
@@ -186,10 +192,37 @@ func (v *View) Draw(screen *ebiten.Image) {
 	// draw agents, their position and their goals
 	for i := 0; i < v.sim.NAgents; i++ {
 		// draw agent
-		color := colornames.Blue
+		//color := colornames.Blue
+
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(-float64(agentAnimations[0][0][0].Bounds().Dx())/2, -float64(agentAnimations[0][0][0].Bounds().Dy())/2)
+		opts.GeoM.Scale(float64(sizeX)*1.5/float64(agentAnimations[0][0][0].Bounds().Dx()), float64(sizeY)*1.5/float64(agentAnimations[0][0][0].Bounds().Dy()))
+		opts.GeoM.Translate(v.sim.Environment.Agents[i].X*float64(sizeX)+float64(sizeX)/2-float64(v.cameraX), v.sim.Environment.Agents[i].Y*float64(sizeY)+float64(sizeY)/2-float64(v.cameraY))
+
+		speedNorm := simulation.Distance(v.sim.Environment.Agents[i].Vx, v.sim.Environment.Agents[i].Vy, 0, 0)
+		model := i % 7
+		animationImage := agentAnimations[model][agentLastDirections[i]][0]
+		if speedNorm > 0.01 {
+			angle := simulation.VectToAngle(v.sim.Environment.Agents[i].Vx, -v.sim.Environment.Agents[i].Vy)
+			sector := simulation.AngleTo8DirectionsSector(angle)
+			// in the spritesheet, the first direction is down and it rotates clockwise
+			sector = (8 - sector) % 8
+			sector = (sector + 6) % 8
+			agentAnimationSteps[i] += speedNorm
+			if agentAnimationSteps[i] > 2 {
+				agentAnimationSteps[i] = 0
+			}
+			animationImage = agentAnimations[model][sector][1+int(agentAnimationSteps[i])%2]
+			agentLastDirections[i] = sector
+		}
+
+		SimulationImage.DrawImage(
+			animationImage,
+			opts,
+		)
 
 		if i == shownAgent {
-			color = colornames.Red
+			//color = colornames.Red
 			textarea.SetText(fmt.Sprintf("verre actuel : %.2f \n\n vessie :%.2f ", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents))
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Translate(v.sim.Environment.Agents[i].X*float64(sizeX)+7, v.sim.Environment.Agents[i].Y*float64(sizeY))
@@ -208,7 +241,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 				SimulationImage.DrawImage(FullBeerImg, opts)
 			}
 		}
-		ebitenvector.DrawFilledCircle(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), sizeX/2, color, false)
+		// ebitenvector.DrawFilledCircle(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), sizeX/2, color, false)
 
 		if v.sim.Environment.Agents[i].Path != nil && (v.showPaths || i == shownAgent) {
 			// draw red circle for goal (99,99)
@@ -219,24 +252,6 @@ func (v *View) Draw(screen *ebiten.Image) {
 				ebitenvector.StrokeLine(SimulationImage, float32(v.sim.Environment.Agents[i].Path[j].GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Path[j].GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(v.sim.Environment.Agents[i].Path[j+1].GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Path[j+1].GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(1*v.cameraZoom), colornames.Green, false)
 			}
 
-			// draw line between agent's projection upon the line between the last waypoint and the next waypoint and the next waypoint
-			//var currentWayPoint *jps.Node
-			//if v.sim.Environment.Agents[i].CurrentWayPoint >= len(v.sim.Environment.Agents[i].Path)-1 {
-			//	currentWayPoint = v.sim.Environment.Agents[i].Goal
-			//} else {
-			//	currentWayPoint = &v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint]
-			//}
-			//waypointsVectorX := float32(currentWayPoint.Pos.X-v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint-1].Pos.X)*sizeX + sizeX/2
-			//waypointsVectorY := float32(currentWayPoint.Pos.Y-v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint-1].Pos.Y)*sizeY + sizeY/2
-			//agentVectorX := float32(v.sim.Environment.Agents[i].X) - float32(v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint-1].Pos.X)*sizeX - sizeX/2
-			//agentVectorY := float32(v.sim.Environment.Agents[i].Y) - float32(v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint-1].Pos.Y)*sizeY - sizeY/2
-			//ProjectedPoint := (agentVectorX*waypointsVectorX + agentVectorY*waypointsVectorY) / (waypointsVectorX*waypointsVectorX + waypointsVectorY*waypointsVectorY)
-			//ProjectedX := float32(v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint-1].Pos.X)*sizeX + sizeX/2 + (ProjectedPoint * waypointsVectorX)
-			//ProjectedY := float32(v.sim.Environment.Agents[i].Path[v.sim.Environment.Agents[i].CurrentWayPoint-1].Pos.Y)*sizeY + sizeY/2 + (ProjectedPoint * waypointsVectorY)
-			//ebitenvector.StrokeLine(screen, ProjectedX, ProjectedY, float32(currentWayPoint.Pos.X)*sizeX+sizeX/2, float32(currentWayPoint.Pos.Y)*sizeY+sizeY/2, 1, colornames.Green, false)
-
-			// draw line between agent and next waypoint
-			//ebitenvector.StrokeLine(screen, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2, float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2, float32(currentWayPoint.GetCol())*sizeX+sizeX/2, float32(currentWayPoint.GetRow())*sizeY+sizeY/2, 1, colornames.Green, false)
 		}
 
 		// draw line between agent and walls that affect it
@@ -276,18 +291,22 @@ func (v *View) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 	return ScreenWidth, ScreenHeight
 }
 
-func main() {
-	ebiten.SetWindowSize(ScreenWidth, ScreenHeight)
-	ebiten.SetWindowTitle("Pic")
-
-	SimulationImage = ebiten.NewImage(ScreenWidth, ScreenHeight)
-
+func init() {
 	FullBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/BeerFull.png")
 	EmptyBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/BeerEmpty.png")
 	OneOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer1Of5.png")
 	TwoOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer2Of5.png")
 	ThreeOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer3Of5.png")
 	FourOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer4Of5.png")
+
+	spriteSheet, _, _ = ebitenutil.NewImageFromFile("assets/spritesheet.png")
+}
+
+func main() {
+	ebiten.SetWindowSize(ScreenWidth, ScreenHeight)
+	ebiten.SetWindowTitle("Pic")
+
+	SimulationImage = ebiten.NewImage(ScreenWidth, ScreenHeight)
 
 	// load font
 	tt, err := opentype.Parse(fonts.MPlus1pRegular_ttf)
@@ -333,6 +352,24 @@ func main() {
 	}
 
 	nAgents := 100
+
+	// initialize animation steps
+	agentAnimationSteps = make([]float64, nAgents)
+
+	// initialize animations
+	for k := 0; k < 7; k++ {
+		agentAnimations[k] = [8][3]*ebiten.Image{}
+		for i := 0; i < 8; i++ {
+			agentAnimations[k][i] = [3]*ebiten.Image{}
+			for j := 0; j < 3; j++ {
+				agentAnimations[k][i][j] = ebiten.NewImage(18, 18)
+				agentAnimations[k][i][j].DrawImage(spriteSheet.SubImage(goimage.Rect(18*(3*i+j), k*18, 18*(3*i+j+1), (k+1)*18)).(*ebiten.Image), nil)
+			}
+		}
+	}
+
+	// initialize last directions
+	agentLastDirections = make([]int, nAgents)
 
 	env := simulation.NewEnvironment(testmap, testMapDense, nAgents)
 	sim := simulation.Simulation{
