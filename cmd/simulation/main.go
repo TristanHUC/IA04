@@ -65,6 +65,9 @@ var (
 	ThreeOfFiveBeerImg  *ebiten.Image
 	FourOfFiveBeerImg   *ebiten.Image
 
+	WallTexture        *ebiten.Image
+	WomanToiletTexture *ebiten.Image
+
 	spriteSheet      *ebiten.Image
 	groundImg        *ebiten.Image
 	leftGroundImg    *ebiten.Image
@@ -203,14 +206,22 @@ func (v *View) Draw(screen *ebiten.Image) {
 	}
 	// draw walls
 	for _, wall := range v.sim.Environment.MapSparse.Walls {
-		ebitenvector.DrawFilledRect(SimulationImage, float32(wall[0])*sizeX-float32(v.cameraX), float32(wall[1])*sizeY-float32(v.cameraY), sizeX, sizeY, colornames.Black, false)
+		opts_wall := &ebiten.DrawImageOptions{}
+		opts_wall.GeoM.Scale(float64(v.cameraZoom), float64(v.cameraZoom))
+		opts_wall.GeoM.Translate(float64(wall[0])*float64(sizeX)-float64(v.cameraX), float64(wall[1])*float64(sizeY)-float64(v.cameraY))
+		SimulationImage.DrawImage(WallTexture, opts_wall)
+
 	}
 	// draw bar spots and toilet spots
 	for _, Beer := range v.sim.Environment.MapSparse.BarPoints {
 		ebitenvector.DrawFilledCircle(SimulationImage, float32(Beer[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Beer[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 201, G: 201, B: 0, A: 255}, false)
 	}
 	for _, WomanWC := range v.sim.Environment.MapSparse.WomanToiletPoints {
-		ebitenvector.DrawFilledCircle(SimulationImage, float32(WomanWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(WomanWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 255, G: 0, B: 200, A: 255}, false)
+		optsWoman := &ebiten.DrawImageOptions{}
+		optsWoman.GeoM.Scale(float64(v.cameraZoom), float64(v.cameraZoom))
+		optsWoman.GeoM.Translate(float64(WomanWC[0])*float64(sizeX)-float64(v.cameraX), float64(WomanWC[1])*float64(sizeY)-float64(v.cameraY))
+		SimulationImage.DrawImage(WomanToiletTexture, optsWoman)
+		//ebitenvector.DrawFilledCircle(SimulationImage, float32(WomanWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(WomanWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 255, G: 0, B: 200, A: 255}, false)
 	}
 	for _, ManWC := range v.sim.Environment.MapSparse.ManToiletPoints {
 		ebitenvector.DrawFilledCircle(SimulationImage, float32(ManWC[0])*sizeX+sizeX/2-float32(v.cameraX), float32(ManWC[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 0, G: 200, B: 255, A: 255}, false)
@@ -326,6 +337,9 @@ func init() {
 	TwoOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer2Of5.png")
 	ThreeOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer3Of5.png")
 	FourOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer4Of5.png")
+
+	WallTexture, _, _ = ebitenutil.NewImageFromFile("assets/WallTexture.png")
+	WomanToiletTexture, _, _ = ebitenutil.NewImageFromFile("assets/WomanToilet.png")
 
 	spriteSheet, _, _ = ebitenutil.NewImageFromFile("assets/spritesheet.png")
 	groundImg, _, _ = ebitenutil.NewImageFromFile("assets/ground.png")
