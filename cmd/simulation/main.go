@@ -252,11 +252,12 @@ func (v *View) Draw(screen *ebiten.Image) {
 			//color = colornames.Red
 			textarea.SetText(fmt.Sprintf("verre actuel : %.2f \n\n vessie :%.2f ", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents))
 			opts := &ebiten.DrawImageOptions{}
-			opts.GeoM.Translate(v.sim.Environment.Agents[i].X*float64(sizeX)+7, v.sim.Environment.Agents[i].Y*float64(sizeY))
+			opts.GeoM.Scale(float64(v.cameraZoom), float64(v.cameraZoom))
+			opts.GeoM.Translate(v.sim.Environment.Agents[i].X*float64(sizeX)+7-float64(v.cameraX), v.sim.Environment.Agents[i].Y*float64(sizeY)-float64(v.cameraY))
 			switch {
-			case v.sim.Environment.Agents[i].DrinkContents == 0:
+			case v.sim.Environment.Agents[i].DrinkContents <= 1:
 				SimulationImage.DrawImage(EmptyBeerImg, opts)
-			case v.sim.Environment.Agents[i].DrinkContents > 0 && v.sim.Environment.Agents[i].DrinkContents < 66:
+			case v.sim.Environment.Agents[i].DrinkContents > 1 && v.sim.Environment.Agents[i].DrinkContents < 66:
 				SimulationImage.DrawImage(OneOfFiveBeerImg, opts)
 			case v.sim.Environment.Agents[i].DrinkContents >= 66 && v.sim.Environment.Agents[i].DrinkContents < 132:
 				SimulationImage.DrawImage(TwoOfFiveBeerImg, opts)
