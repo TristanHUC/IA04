@@ -478,7 +478,7 @@ func main() {
 		testMapDense[wall[1]][wall[0]] = 1
 	}
 
-	nAgents := 100
+	nAgents := 60
 
 	// initialize animation steps
 	agentAnimationSteps = make([]float64, nAgents)
