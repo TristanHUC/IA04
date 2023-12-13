@@ -73,8 +73,19 @@ var (
 	topGroundImg     *ebiten.Image
 	topLeftGroundImg *ebiten.Image
 	cornerGroundImg  *ebiten.Image
-	testMapDense     [][]uint8
-	SimulationImage  *ebiten.Image
+
+	wallImg            *ebiten.Image
+	wallLeftImg        *ebiten.Image
+	wallRightImg       *ebiten.Image
+	wallLeftRightImg   *ebiten.Image
+	wallTopImg         *ebiten.Image
+	wallLateralImg     *ebiten.Image
+	wallLateralUpRight *ebiten.Image
+	wallLateralUpLeft  *ebiten.Image
+	wallTopAboveWall   *ebiten.Image
+
+	testMapDense    [][]uint8
+	SimulationImage *ebiten.Image
 )
 
 func (v *View) Update() error {
@@ -133,7 +144,7 @@ func (v *View) Update() error {
 				closestAgent = i
 			}
 		}
-		if closestAgent != -1 {
+		if closestAgent != -1 && minDist < 2 {
 			shownAgent = closestAgent
 		}
 	}
@@ -157,8 +168,8 @@ func (v *View) Update() error {
 }
 
 func (v *View) Draw(screen *ebiten.Image) {
-	// fill white
-	SimulationImage.Fill(colornames.White)
+	// fill background #404059
+	SimulationImage.Fill(color.RGBA{R: 40, G: 40, B: 59, A: 255})
 
 	// write camera pos in top left corner
 	textToWrite := fmt.Sprintf("(%d, %d)", int(v.cameraX), int(v.cameraY))
@@ -205,7 +216,73 @@ func (v *View) Draw(screen *ebiten.Image) {
 	}
 	// draw walls
 	for _, wall := range v.sim.Environment.MapSparse.Walls {
-		ebitenvector.DrawFilledRect(SimulationImage, float32(wall[0])*sizeX-float32(v.cameraX), float32(wall[1])*sizeY-float32(v.cameraY), sizeX, sizeY, colornames.Black, false)
+		//ebitenvector.DrawFilledRect(SimulationImage, float32(wall[0])*sizeX-float32(v.cameraX), float32(wall[1])*sizeY-float32(v.cameraY), sizeX, sizeY, colornames.Black, false)
+		options := &ebiten.DrawImageOptions{}
+		options.GeoM.Scale(float64(sizeX)/float64(wallImg.Bounds().Dx()), float64(sizeY)/float64(wallImg.Bounds().Dy()))
+		options.GeoM.Translate(float64(wall[0])*float64(sizeX)-float64(v.cameraX), float64(wall[1])*float64(sizeY)-float64(v.cameraY))
+
+		rightWallOptions := &ebiten.DrawImageOptions{}
+		rightWallOptions.GeoM.Scale(float64(sizeX)/float64(wallImg.Bounds().Dx()), float64(sizeY)/float64(wallImg.Bounds().Dy()))
+		rightWallOptions.GeoM.Translate(float64(wall[0])*float64(sizeX)-float64(v.cameraX), float64(wall[1])*float64(sizeY)-float64(v.cameraY))
+		rightWallOptions.GeoM.Translate(float64(sizeX)-float64(wallLateralImg.Bounds().Dx())/float64(wallImg.Bounds().Dx())*float64(sizeX), 0)
+		// draw full wall if there is no wall down
+		if wall[1] < maxH-1 && v.sim.Environment.MapDense[wall[1]+1][wall[0]] == 0 {
+			// if nothing left nor right
+			if (wall[0] > 0 && v.sim.Environment.MapDense[wall[1]][wall[0]-1] == 0) && (wall[0] < maxW-1 && v.sim.Environment.MapDense[wall[1]][wall[0]+1] == 0) {
+				SimulationImage.DrawImage(wallLeftRightImg, options)
+			} else if wall[0] > 0 && v.sim.Environment.MapDense[wall[1]][wall[0]-1] == 0 {
+				SimulationImage.DrawImage(wallLeftImg, options)
+			} else if wall[0] < maxW-1 && v.sim.Environment.MapDense[wall[1]][wall[0]+1] == 0 {
+				SimulationImage.DrawImage(wallRightImg, options)
+			} else {
+				SimulationImage.DrawImage(wallImg, options)
+			}
+		} else {
+			// draw white square #F8F8F8
+			ebitenvector.DrawFilledRect(
+				SimulationImage,
+				float32(wall[0])*sizeX-float32(v.cameraX),
+				float32(wall[1])*sizeY-float32(v.cameraY),
+				sizeX,
+				sizeY,
+				color.RGBA{R: 248, G: 248, B: 248, A: 255},
+				false,
+			)
+			// if nothing left or bottom left
+			if (wall[0] > 0 && v.sim.Environment.MapDense[wall[1]][wall[0]-1] == 0) || (wall[0] > 0 && wall[1] < maxH-1 && v.sim.Environment.MapDense[wall[1]+1][wall[0]-1] == 0) {
+				SimulationImage.DrawImage(wallLateralImg, options)
+			}
+			// if nothing right or bottom right
+			if wall[0] < maxW-1 && v.sim.Environment.MapDense[wall[1]][wall[0]+1] == 0 || (wall[0] < maxW-1 && wall[1] < maxH-1 && v.sim.Environment.MapDense[wall[1]+1][wall[0]+1] == 0) {
+				SimulationImage.DrawImage(wallLateralImg, rightWallOptions)
+			}
+
+			// if nothing top
+			if wall[1] > 0 && v.sim.Environment.MapDense[wall[1]-1][wall[0]] == 0 {
+				SimulationImage.DrawImage(wallTopImg, options)
+
+				// if nothing left
+				if wall[0] > 0 && v.sim.Environment.MapDense[wall[1]][wall[0]-1] == 0 {
+					SimulationImage.DrawImage(wallLateralUpRight, options)
+				}
+				// if nothing bottom left
+				if wall[0] > 0 && wall[1] < maxH-1 && v.sim.Environment.MapDense[wall[1]+1][wall[0]-1] == 0 {
+					//SimulationImage.DrawImage(wallLateralUpRight, options)
+				}
+				// if nothing right or bottom right
+				if wall[0] < maxW-1 && v.sim.Environment.MapDense[wall[1]][wall[0]+1] == 0 {
+					SimulationImage.DrawImage(wallLateralUpLeft, rightWallOptions)
+				}
+				if wall[0] < maxW-1 && wall[1] < maxH-1 && v.sim.Environment.MapDense[wall[1]+1][wall[0]+1] == 0 {
+					//SimulationImage.DrawImage(wallLateralUpLeft, rightWallOptions)
+				}
+
+				// if wall below and left and right
+				if wall[1] < maxH-1 && v.sim.Environment.MapDense[wall[1]+1][wall[0]] == 1 && wall[0] > 0 && v.sim.Environment.MapDense[wall[1]][wall[0]-1] == 1 && wall[0] < maxW-1 && v.sim.Environment.MapDense[wall[1]][wall[0]+1] == 1 {
+					SimulationImage.DrawImage(wallTopAboveWall, options)
+				}
+			}
+		}
 	}
 	// draw bar spots and toilet spots
 	for _, Beer := range v.sim.Environment.MapSparse.BarPoints {
@@ -229,7 +306,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(-float64(agentAnimations[0][0][0].Bounds().Dx())/2, -float64(agentAnimations[0][0][0].Bounds().Dy())/2)
-		opts.GeoM.Scale(float64(sizeX)*1.5/float64(agentAnimations[0][0][0].Bounds().Dx()), float64(sizeY)*1.5/float64(agentAnimations[0][0][0].Bounds().Dy()))
+		opts.GeoM.Scale(float64(sizeX)*1.3/float64(agentAnimations[0][0][0].Bounds().Dx()), float64(sizeY)*1.3/float64(agentAnimations[0][0][0].Bounds().Dy()))
 		opts.GeoM.Translate(v.sim.Environment.Agents[i].X*float64(sizeX)+float64(sizeX)/2-float64(v.cameraX), v.sim.Environment.Agents[i].Y*float64(sizeY)+float64(sizeY)/2-float64(v.cameraY))
 
 		speedNorm := simulation.Distance(v.sim.Environment.Agents[i].Vx, v.sim.Environment.Agents[i].Vy, 0, 0)
@@ -341,6 +418,15 @@ func init() {
 	topGroundImg, _, _ = ebitenutil.NewImageFromFile("assets/ground_top.png")
 	topLeftGroundImg, _, _ = ebitenutil.NewImageFromFile("assets/ground_top_left.png")
 	cornerGroundImg, _, _ = ebitenutil.NewImageFromFile("assets/ground_corner.png")
+	wallImg, _, _ = ebitenutil.NewImageFromFile("assets/wall_new.png")
+	wallLeftImg, _, _ = ebitenutil.NewImageFromFile("assets/wall_left.png")
+	wallRightImg, _, _ = ebitenutil.NewImageFromFile("assets/wall_right.png")
+	wallLeftRightImg, _, _ = ebitenutil.NewImageFromFile("assets/wall_left_right.png")
+	wallTopImg, _, _ = ebitenutil.NewImageFromFile("assets/wall_top.png")
+	wallLateralImg, _, _ = ebitenutil.NewImageFromFile("assets/wall_lateral.png")
+	wallLateralUpLeft, _, _ = ebitenutil.NewImageFromFile("assets/wall_lateral_up_left.png")
+	wallLateralUpRight, _, _ = ebitenutil.NewImageFromFile("assets/wall_lateral_up_right.png")
+	wallTopAboveWall, _, _ = ebitenutil.NewImageFromFile("assets/wall_top_above_wall.png")
 }
 
 func main() {
