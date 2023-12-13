@@ -38,6 +38,15 @@ func (m *Map) LoadFromFile(filename string) error {
 		if c == 'b' {
 			m.BarPoints = append(m.BarPoints, [2]int{column, m.Height})
 		}
+		if c == 'c' {
+			m.BarmenArea = append(m.BarmenArea, [2]int{column, m.Height})
+		}
+		if c == 't' {
+			m.BeerTaps = append(m.BeerTaps, [2]int{column, m.Height})
+		}
+		if c == 'a' {
+			m.CounterArea = append(m.CounterArea, [2]int{column, m.Height})
+		}
 		if c == '\n' {
 			m.Height++
 			if column > m.Width {
@@ -86,6 +95,9 @@ func (m *Map) SaveToFile(filename string) error {
 			isBar := false
 			isWomanToilet := false
 			isManToilet := false
+			isBarmenArea := false
+			isBeerTap := false
+			isCounterArea := false
 			isEmpty := true
 
 			//adding wall to the map
@@ -98,7 +110,7 @@ func (m *Map) SaveToFile(filename string) error {
 			if isWall {
 				f.Write([]byte{'w'})
 				isEmpty = false
-			} 
+			}
 
 			//adding Bar to the map
 			for _, Bar := range m.BarPoints {
@@ -122,7 +134,7 @@ func (m *Map) SaveToFile(filename string) error {
 			if isWomanToilet {
 				f.Write([]byte{'f'})
 				isEmpty = false
-			} 
+			}
 
 			//adding ManToilet to the map
 			for _, ManToilet := range m.ManToiletPoints {
@@ -134,11 +146,48 @@ func (m *Map) SaveToFile(filename string) error {
 			if isManToilet {
 				f.Write([]byte{'m'})
 				isEmpty = false
-			} 
+			}
+
+			//adding BarmenArea to the map
+			for _, BarmenArea := range m.BarmenArea {
+				if BarmenArea[0] == x && BarmenArea[1] == y {
+					isBarmenArea = true
+					break
+				}
+			}
+			if isBarmenArea {
+				f.Write([]byte{'c'})
+				isEmpty = false
+			}
+
+			//adding BeerTaps to the map
+			for _, BeerTap := range m.BeerTaps {
+				if BeerTap[0] == x && BeerTap[1] == y {
+					isBeerTap = true
+					break
+				}
+			}
+			if isBeerTap {
+				f.Write([]byte{'t'})
+				isEmpty = false
+			}
+
+			//adding CounterArea to the map
+			for _, CounterArea := range m.CounterArea {
+				if CounterArea[0] == x && CounterArea[1] == y {
+					isCounterArea = true
+					break
+				}
+			}
+			if isCounterArea {
+				f.Write([]byte{'a'})
+				isEmpty = false
+			}
+
 			if isEmpty == true {
 				f.Write([]byte{' '})
-			}			
-			
+			}
+
 		}
 		f.Write([]byte{'\n'})
 	}

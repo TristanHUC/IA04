@@ -18,10 +18,19 @@ func NewEnvironment(sparseMap _map.Map, denseMap [][]uint8, nAgents int) *Enviro
 		PerceptChannel: make(chan PerceptRequest, 1),
 		Agents:         make([]*Agent, nAgents),
 	}
-	for i := 0; i < nAgents; i++ {
-		x, y := GenerateValidCoordinates(sparseMap.Walls, sparseMap.Width, sparseMap.Height)
-		env.Agents[i] = NewAgent(float64(x), float64(y), denseMap, &sparseMap, env.PerceptChannel)
+	//for i := 0; i < nAgents; i++ {
+	//	x, y := GenerateValidCoordinates(sparseMap.Walls, sparseMap.Width, sparseMap.Height)
+	//	env.Agents[i] = NewAgent(float64(x), float64(y), denseMap, &sparseMap, env.PerceptChannel)
+	//}
+	nbBarmen := 10
+	for iClient := 0; iClient < nAgents-nbBarmen; iClient++ {
+		env.Agents[iClient] = NewAgent(ClientTypeAgent, denseMap, &sparseMap, env.PerceptChannel)
 	}
+	for iBarman := nAgents - nbBarmen; iBarman < nAgents; iBarman++ {
+		env.Agents[iBarman] = NewAgent(BarmanTypeAgent, denseMap, &sparseMap, env.PerceptChannel)
+	}
+
+	//
 	return &env
 }
 
@@ -40,6 +49,7 @@ func (e *Environment) PerceptRequestsHandler() {
 		select {
 		case perceptRequest := <-e.PerceptChannel:
 			perceptRequest.ResponseChannel <- e.GetNearbyAgents(perceptRequest.Agt)
+
 		}
 	}
 }

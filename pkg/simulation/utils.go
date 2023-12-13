@@ -38,3 +38,7 @@ func GenerateValidCoordinates(walls [][2]int, width, height int) (float32, float
 func distance(x1, y1, x2, y2 float64) float64 {
 	return math.Sqrt(math.Pow(x1-x2, 2) + math.Pow(y1-y2, 2))
 }
+
+func distanceInt(x1, y1, x2, y2 int) float64 {
+	return math.Sqrt(math.Pow(float64(x1-x2), 2) + math.Pow(float64(y1-y2), 2))
+}
