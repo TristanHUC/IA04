@@ -6,6 +6,7 @@ import (
 	"golang.org/x/exp/slices"
 	"math"
 	"math/rand"
+	"time"
 )
 
 type ClientBehavior struct{}
@@ -116,5 +117,35 @@ func (ClientBehavior) Act(a *Agent) {
 		} else if a.action == GoToRandomSpot {
 			a.action = None
 		}
+	}
+}
+
+func (a *Agent) Drink() {
+	if a.DrinkContents >= a.drinkSpeed {
+		a.DrinkContents -= a.drinkSpeed
+		a.BladderContents += a.drinkSpeed
+		// 1000 for ml -> l, 0.07 for alcohol percentage, 0.78 alcohol density, 5 for liters in the body
+		a.BloodAlcoholLevel += (a.drinkSpeed * 1000) * 0.07 * 0.78 / 5
+	} else if a.drinkEmptyTime.IsZero() {
+		// if drink just finished, set time
+		a.drinkEmptyTime = time.Now()
+	}
+}
+
+// WaitForBeer listen to the Beer channel, if a Beer is received, drink it
+func (a *Agent) WaitForBeer() {
+	var response bool
+	response = <-a.BeerChannel
+	// a barman has chosen this client
+	if !response {
+		a.hasABarman = true
+		a.WaitForBeer()
+	} else {
+		a.DrinkContents = 300
+		a.hasABarman = false
+		a.action = GoToRandomSpot
+		goalX, goalY := GenerateValidCoordinates(a.picMapSparse.Walls, a.picMapSparse.Width, a.picMapSparse.Height)
+		g := jps.GetNode(int(goalY), int(goalX))
+		a.Goal = &g
 	}
 }

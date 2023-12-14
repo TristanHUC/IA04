@@ -29,33 +29,6 @@ type Behavior interface {
 	Act(a *Agent)
 }
 
-func (a *Agent) ClientCoordinatesGenerator(m _map.Map) (float64, float64) {
-	x := rand.Intn(m.Width)
-	y := rand.Intn(m.Height)
-	coordsOk := false
-	// while agent is inside a wall, generate new coordinates
-	for !coordsOk {
-		coordsOk = true
-		for _, wall := range m.Walls {
-			if wall[0] == x && wall[1] == y {
-				x = rand.Intn(m.Width)
-				y = rand.Intn(m.Height)
-				coordsOk = false
-			}
-		}
-		for _, counter := range m.BarmenArea {
-			if counter[0] == x && counter[1] == y {
-				x = rand.Intn(m.Width)
-				y = rand.Intn(m.Height)
-				coordsOk = false
-			}
-		}
-	}
-	xFloat := float64(x) + rand.Float64()
-	yFloat := float64(y) + rand.Float64()
-	return xFloat, yFloat
-}
-
 type Agent struct {
 	X, Y, Vx, Vy, gx, gy, Speed, reactivity float64 // je pense qu'on peut retirer les Vx, vy, gx, gy, tx, ty des attributs
 	tx, ty                                  float64
@@ -126,9 +99,13 @@ func (a *Agent) Run() {
 		if a.lastExecutionTime.Add(17 * time.Millisecond).Before(time.Now()) {
 			a.Percept()
 			a.lastExecutionTime = time.Now()
-			a.BloodAlcoholLevel -= 0.0001
+
+			if a.BloodAlcoholLevel > 0.0001 {
+				a.BloodAlcoholLevel -= 0.0001
+			}
 			a.behavior.Reflect(a)
 			a.behavior.Act(a)
+
 			// if agent has no path but a goal is set, calculate path
 			if a.Goal != nil && a.Path == nil {
 				err := a.calculatePath()
@@ -144,26 +121,17 @@ func (a *Agent) Run() {
 				}
 			}
 			// agent reflexes
-			a.calculatePosition()
+			err := a.calculatePosition()
+			if err != nil {
+				fmt.Errorf("error calculating position: %v", err)
+			}
 		} else {
 			time.Sleep(1 * time.Millisecond)
 		}
 	}
 }
 
-func (a *Agent) Drink() {
-	if a.DrinkContents >= a.drinkSpeed {
-		a.DrinkContents -= a.drinkSpeed
-		a.BladderContents += a.drinkSpeed
-		// 1000 for ml -> l, 0.07 for alcohol percentage, 0.78 alcohol density, 5 for liters in the body
-		a.BloodAlcoholLevel += (a.drinkSpeed * 1000) * 0.07 * 0.78 / 5
-	} else if a.drinkEmptyTime.IsZero() {
-		// if drink just finished, set time
-		a.drinkEmptyTime = time.Now()
-	}
-}
-
-// get the closest barmen area in euclidean distance from the attribute client
+// GetClosestBarmenArea returns the closest barmen area to a given client
 func (a *Agent) GetClosestBarmenArea(client Agent) jps.Node {
 	var closestBarmenArea [2]int
 	var minDistance float64 = 100000
@@ -176,44 +144,6 @@ func (a *Agent) GetClosestBarmenArea(client Agent) jps.Node {
 		}
 	}
 	return jps.GetNode(closestBarmenArea[1], closestBarmenArea[0])
-}
-
-// may not find a client if there is none
-func (a *Agent) SearchForClient() {
-	for _, agent := range a.closeAgents {
-		if agent.action == WaitForBeer && !agent.hasABarman {
-			a.client = agent
-			g := a.GetClosestBarmenArea(*agent)
-			a.Goal = &g
-			// notify the client that he has a barman
-			a.client.BeerChannel <- false
-			a.action = GoToClient
-			break
-		}
-	}
-}
-
-func (a *Agent) GiveABeer() {
-	a.client.BeerChannel <- true
-	a.DrinkContents = 0
-}
-
-// listen to the Beer channel, if a Beer is received, drink it
-func (a *Agent) WaitForBeer() {
-	var response bool
-	response = <-a.BeerChannel
-	// a barman has chosen this client
-	if !response {
-		a.hasABarman = true
-		a.WaitForBeer()
-	} else {
-		a.DrinkContents = 300
-		a.hasABarman = false
-		a.action = GoToRandomSpot
-		goalX, goalY := GenerateValidCoordinates(a.picMapSparse.Walls, a.picMapSparse.Width, a.picMapSparse.Height)
-		g := jps.GetNode(int(goalY), int(goalX))
-		a.Goal = &g
-	}
 }
 
 func (a *Agent) calculatePath() error {

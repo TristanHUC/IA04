@@ -54,3 +54,23 @@ func (BarmanBehavior) CoordinatesGenerator(m _map.Map) (float64, float64) {
 	counterPoints := m.BarmenArea[rand.Intn(len(m.BarmenArea))]
 	return float64(counterPoints[0]) + rand.Float64(), float64(counterPoints[1]) + rand.Float64()
 }
+
+// SearchForClient may not find a client if there is none
+func (a *Agent) SearchForClient() {
+	for _, agent := range a.closeAgents {
+		if agent.action == WaitForBeer && !agent.hasABarman {
+			a.client = agent
+			g := a.GetClosestBarmenArea(*agent)
+			a.Goal = &g
+			// notify the client that he has a barman
+			a.client.BeerChannel <- false
+			a.action = GoToClient
+			break
+		}
+	}
+}
+
+func (a *Agent) GiveABeer() {
+	a.client.BeerChannel <- true
+	a.DrinkContents = 0
+}
