@@ -160,6 +160,10 @@ func (g *Game) Update() error {
 					int(float32(x+g.CameraX) / 10),
 					int(float32(y+g.CameraY) / 10),
 				})
+				g.Map.Walls = append(g.Map.Walls, [2]int{
+					int(float32(x+g.CameraX) / 10),
+					int(float32(y+g.CameraY) / 10),
+				})
 			}
 
 		}
@@ -206,8 +210,8 @@ func (g *Game) Update() error {
 					break
 				}
 			}
-			for i, CounterArea := range g.Map.CounterArea {
-				if CounterArea[0] == int(float32(x+g.CameraX)/10) && CounterArea[1] == int(float32(y+g.CameraY)/10) {
+			for i, counterArea := range g.Map.CounterArea {
+				if counterArea[0] == int(float32(x+g.CameraX)/10) && counterArea[1] == int(float32(y+g.CameraY)/10) {
 					g.Map.CounterArea = append(g.Map.CounterArea[:i], g.Map.CounterArea[i+1:]...)
 					break
 				}
@@ -248,8 +252,8 @@ func (g *Game) IsCaseTaken(x int, y int) bool {
 			return true
 		}
 	}
-	for _, CounterArea := range g.Map.CounterArea {
-		if CounterArea[0] == int(float32(x+g.CameraX)/10) && CounterArea[1] == int(float32(y+g.CameraY)/10) {
+	for _, counterArea := range g.Map.CounterArea {
+		if counterArea[0] == int(float32(x+g.CameraX)/10) && counterArea[1] == int(float32(y+g.CameraY)/10) {
 			return true
 		}
 	}
@@ -298,16 +302,35 @@ func (g *Game) DrawMap(screen *ebiten.Image) {
 	}
 
 	// draw map
+	isCounterArea := false
 	for _, wall := range g.Map.Walls {
-		vector.DrawFilledRect(
-			screen,
-			float32(wall[0])*10-float32(g.CameraX),
-			float32(wall[1])*10-float32(g.CameraY),
-			10,
-			10,
-			color.Black,
-			false,
-		)
+		isCounterArea = false
+		for _, counterArea := range g.Map.CounterArea {
+			if wall[0] == counterArea[0] && wall[1] == counterArea[1] {
+				vector.DrawFilledRect(
+					screen,
+					float32(counterArea[0])*10-float32(g.CameraX),
+					float32(counterArea[1])*10-float32(g.CameraY),
+					10,
+					10,
+					color.RGBA{R: 255, G: 255, B: 0, A: 255},
+					false,
+				)
+				isCounterArea = true
+				break
+			}
+		}
+		if !isCounterArea {
+			vector.DrawFilledRect(
+				screen,
+				float32(wall[0])*10-float32(g.CameraX),
+				float32(wall[1])*10-float32(g.CameraY),
+				10,
+				10,
+				color.Black,
+				false,
+			)
+		}
 	}
 	// draw beer
 	for _, beer := range g.Map.BarPoints {
@@ -370,16 +393,5 @@ func (g *Game) DrawMap(screen *ebiten.Image) {
 			false,
 		)
 	}
-	// draw CounterArea
-	for _, CounterArea := range g.Map.CounterArea {
-		vector.DrawFilledRect(
-			screen,
-			float32(CounterArea[0])*10-float32(g.CameraX),
-			float32(CounterArea[1])*10-float32(g.CameraY),
-			10,
-			10,
-			color.RGBA{R: 255, G: 255, B: 0, A: 255},
-			false,
-		)
-	}
+
 }

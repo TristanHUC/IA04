@@ -46,6 +46,7 @@ func (m *Map) LoadFromFile(filename string) error {
 		}
 		if c == 'a' {
 			m.CounterArea = append(m.CounterArea, [2]int{column, m.Height})
+			m.Walls = append(m.Walls, [2]int{column, m.Height})
 		}
 		if c == '\n' {
 			m.Height++
@@ -107,7 +108,17 @@ func (m *Map) SaveToFile(filename string) error {
 					break
 				}
 			}
-			if isWall {
+			//adding CounterArea to the map
+			for _, CounterArea := range m.CounterArea {
+				if CounterArea[0] == x && CounterArea[1] == y {
+					isCounterArea = true
+					break
+				}
+			}
+			if isCounterArea {
+				f.Write([]byte{'a'})
+				isEmpty = false
+			} else if isWall {
 				f.Write([]byte{'w'})
 				isEmpty = false
 			}
@@ -169,18 +180,6 @@ func (m *Map) SaveToFile(filename string) error {
 			}
 			if isBeerTap {
 				f.Write([]byte{'t'})
-				isEmpty = false
-			}
-
-			//adding CounterArea to the map
-			for _, CounterArea := range m.CounterArea {
-				if CounterArea[0] == x && CounterArea[1] == y {
-					isCounterArea = true
-					break
-				}
-			}
-			if isCounterArea {
-				f.Write([]byte{'a'})
 				isEmpty = false
 			}
 
