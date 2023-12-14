@@ -243,7 +243,7 @@ func (a *Agent) BarmanAct() {
 	}
 
 	// if goal is reached
-	if a.action != None && a.Goal != nil && distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
+	if a.action != None && a.Goal != nil && Distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
 		a.Path = nil
 		a.CurrentWayPoint = 0
 		a.Goal = nil
@@ -335,7 +335,7 @@ func (a *Agent) ClientAct() {
 	}
 
 	// if agent is waiting for a Beer, doesnt move even if he has reached his goal
-	if a.action == WaitForBeer && distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
+	if a.action == WaitForBeer && Distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
 		return
 	}
 
