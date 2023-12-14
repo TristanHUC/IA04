@@ -73,7 +73,7 @@ func (a *Agent) BarmanCoordinatesGenerator(m _map.Map) (float64, float64) {
 }
 
 type Agent struct {
-	X, Y, vx, vy, gx, gy, speed, reactivity float64 // je pense qu'on peut retirer les vx, vy, gx, gy, tx, ty des attributs
+	X, Y, Vx, Vy, gx, gy, Speed, reactivity float64 // je pense qu'on peut retirer les Vx, vy, gx, gy, tx, ty des attributs
 	tx, ty                                  float64
 	controllable                            bool
 	Path                                    []jps.Node
@@ -109,7 +109,7 @@ type PerceptRequest struct {
 func NewAgent(typeAgent TypeAgent, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest) *Agent {
 	agent := &Agent{
 		typeAgent:         typeAgent,
-		speed:             float64(rand.Intn(1)+1) / 30,
+		Speed:             float64(rand.Intn(1)+1) / 30,
 		reactivity:        0.1,
 		controllable:      true,
 		channelAgent:      make(chan []*Agent, 1),
@@ -243,7 +243,7 @@ func (a *Agent) BarmanAct() {
 	}
 
 	// if goal is reached
-	if a.action != None && a.Goal != nil && distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
+	if a.action != None && a.Goal != nil && Distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
 		a.Path = nil
 		a.CurrentWayPoint = 0
 		a.Goal = nil
@@ -335,12 +335,12 @@ func (a *Agent) ClientAct() {
 	}
 
 	// if agent is waiting for a Beer, doesnt move even if he has reached his goal
-	if a.action == WaitForBeer && distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
+	if a.action == WaitForBeer && Distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
 		return
 	}
 
 	// if goal is reached
-	if a.action != None && a.Goal != nil && distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
+	if a.action != None && a.Goal != nil && Distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
 		a.Path = nil
 		a.CurrentWayPoint = 0
 		a.Goal = nil
@@ -391,12 +391,12 @@ func (a *Agent) calculatePosition() error {
 		gvNorm := math.Sqrt(gvx*gvx + gvy*gvy)
 		gvx /= gvNorm
 		gvy /= gvNorm
-		gvx *= a.speed
-		gvy *= a.speed
+		gvx *= a.Speed
+		gvy *= a.Speed
 
 		// change velocity towards goal velocity at a rate of reactivity
-		a.vx += (gvx - a.vx) * a.reactivity
-		a.vy += (gvy - a.vy) * a.reactivity
+		a.Vx += (gvx - a.Vx) * a.reactivity
+		a.Vy += (gvy - a.Vy) * a.reactivity
 	}
 
 	// change velocity to avoid other agents following moussaïd 2009
@@ -413,8 +413,8 @@ func (a *Agent) calculatePosition() error {
 
 		ex := (otherAgent.X*factor - a.X*factor) / dist
 		ey := (otherAgent.Y*factor - a.Y*factor) / dist
-		Dx := lambda*(a.vx*factor-otherAgent.vx*factor) + ex
-		Dy := lambda*(a.vy*factor-otherAgent.vy*factor) + ey
+		Dx := lambda*(a.Vx*factor-otherAgent.Vx*factor) + ex
+		Dy := lambda*(a.Vy*factor-otherAgent.Vy*factor) + ey
 		DNorm := math.Sqrt(Dx*Dx + Dy*Dy)
 		tx := Dx / DNorm
 		ty := Dy / DNorm
@@ -428,8 +428,8 @@ func (a *Agent) calculatePosition() error {
 		addedToVX := -A * math.Exp(-dist/B) * (math.Exp(-math.Pow(np*B*theta, 2))*tx + math.Exp(-math.Pow(n*B*theta, 2))*nx) / factor
 		addedToVY := -A * math.Exp(-dist/B) * (math.Exp(-math.Pow(np*B*theta, 2))*ty + math.Exp(-math.Pow(n*B*theta, 2))*ny) / factor
 
-		a.vx += addedToVX
-		a.vy += addedToVY
+		a.Vx += addedToVX
+		a.Vy += addedToVY
 	}
 
 	//prise en compte des murs
@@ -446,20 +446,20 @@ func (a *Agent) calculatePosition() error {
 		reactionMurX = vectx * (3e5 * math.Exp(-(normeEucli+0.5)/0.1))
 		reactionMurY = vecty * (3e5 * math.Exp(-(normeEucli+0.5)/0.1))
 
-		a.vx -= reactionMurX
-		a.vy -= reactionMurY
+		a.Vx -= reactionMurX
+		a.Vy -= reactionMurY
 	}
 
 	//safeguard against too big values
-	if norm := math.Sqrt(a.vx*a.vx + a.vy*a.vy); norm > a.speed*1.5 {
-		a.vx = a.vx / norm * a.speed
-		a.vy = a.vy / norm * a.speed
+	if norm := math.Sqrt(a.Vx*a.Vx + a.Vy*a.Vy); norm > a.Speed*1.5 {
+		a.Vx = a.Vx / norm * a.Speed
+		a.Vy = a.Vy / norm * a.Speed
 	}
 
-	a.X += a.vx
-	a.Y += a.vy
+	a.X += a.Vx
+	a.Y += a.Vy
 
-	a.rollingMeanMovement = (a.rollingMeanMovement + math.Sqrt(a.vx*a.vx+a.vy*a.vy)) / 2
+	a.rollingMeanMovement = (a.rollingMeanMovement + math.Sqrt(a.Vx*a.Vx+a.Vy*a.Vy)) / 2
 
 	// passage à l'étape d'après :
 	if wayPoint != nil && a.CurrentWayPoint < len(a.Path)-1 && math.Sqrt((float64(wayPoint.GetCol())-a.X)*(float64(wayPoint.GetCol())-a.X)+(float64(wayPoint.GetRow())-a.Y)*(float64(wayPoint.GetRow())-a.Y)) < 1 {

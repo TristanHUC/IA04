@@ -35,8 +35,28 @@ func GenerateValidCoordinates(walls [][2]int, width, height int) (float32, float
 	return xFloat, yFloat
 }
 
-func distance(x1, y1, x2, y2 float64) float64 {
+func Distance(x1, y1, x2, y2 float64) float64 {
 	return math.Sqrt(math.Pow(x1-x2, 2) + math.Pow(y1-y2, 2))
+}
+
+// AngleTo8DirectionsSector takes in an angle in radians between [0, 2pi] and returns an int between [0, 7]
+func AngleTo8DirectionsSector(angle float64) int {
+	// Calculate the sector based on the angle
+	sector := int(math.Floor((angle + math.Pi/8) / (math.Pi / 4)))
+	// Map sector to a valid range [0, 7]
+	return (sector) % 8
+}
+
+// VectToAngle takes in a vector and returns the angle in radians between [0, 2pi]
+func VectToAngle(x, y float64) float64 {
+	angle := math.Atan2(y, x)
+	if angle < 0 {
+		angle += 2 * math.Pi
+	}
+
+	// Adjust the angle to be in the range [0, 2*pi)
+	angle = math.Mod(angle, 2*math.Pi)
+	return angle
 }
 
 func distanceInt(x1, y1, x2, y2 int) float64 {
