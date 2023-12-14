@@ -479,6 +479,7 @@ func main() {
 	}
 
 	nAgents := 60
+	nBarmen := 4
 
 	// initialize animation steps
 	agentAnimationSteps = make([]float64, nAgents)
@@ -498,7 +499,7 @@ func main() {
 	// initialize last directions
 	agentLastDirections = make([]int, nAgents)
 
-	env := simulation.NewEnvironment(testmap, testMapDense, nAgents)
+	env := simulation.NewEnvironment(testmap, testMapDense, nAgents, nBarmen)
 	sim := simulation.Simulation{
 		Environment: env,
 		NAgents:     nAgents,
