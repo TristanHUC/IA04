@@ -70,6 +70,16 @@ func InitHud(screenWidth, screenHeight int) {
 		log.Fatal(err)
 	}
 
+	ExitIconImg, _, err := ebitenutil.NewImageFromFile("assets/ExitLogo.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	EnterIconImg, _, err := ebitenutil.NewImageFromFile("assets/EnterLogo.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ebiten.SetCursorShape(ebiten.CursorShapeMove)
 
 	// load font
@@ -211,7 +221,33 @@ func InitHud(screenWidth, screenHeight int) {
 	counterAreaButton.imageOptions.GeoM.Scale(0.2, 0.2)
 	counterAreaButton.imageOptions.GeoM.Translate(float64(counterAreaButton.x), float64(counterAreaButton.y))
 
-	buttons = append(buttons, moveCursorButton, wallButton, eraseButton, beerButton, manWCButton, womanWCButton, BarmenAreaButton, bierTapButton, counterAreaButton)
+	ExitButton := Button{
+		x:            screenWidth - 50,
+		y:            screenHeight - 500,
+		width:        40,
+		height:       40,
+		text:         "",
+		image:        ExitIconImg,
+		imageOptions: &ebiten.DrawImageOptions{},
+		mode:         Exit,
+	}
+	ExitButton.imageOptions.GeoM.Scale(0.2, 0.2)
+	ExitButton.imageOptions.GeoM.Translate(float64(ExitButton.x), float64(ExitButton.y))
+
+	EnterButton := Button{
+		x:            screenWidth - 50,
+		y:            screenHeight - 550,
+		width:        40,
+		height:       40,
+		text:         "",
+		image:        EnterIconImg,
+		imageOptions: &ebiten.DrawImageOptions{},
+		mode:         Enter,
+	}
+	EnterButton.imageOptions.GeoM.Scale(0.2, 0.2)
+	EnterButton.imageOptions.GeoM.Translate(float64(EnterButton.x), float64(EnterButton.y))
+
+	buttons = append(buttons, moveCursorButton, wallButton, eraseButton, beerButton, manWCButton, womanWCButton, BarmenAreaButton, bierTapButton, counterAreaButton, ExitButton, EnterButton)
 }
 
 func DrawButtons(screen *ebiten.Image) {

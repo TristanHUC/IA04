@@ -57,6 +57,7 @@ var (
 	rootContainer       *widget.Container
 	textarea            *widget.TextArea
 	openButton          *widget.Button
+	slider              *widget.Slider
 	isOpen              bool = true
 	FullBeerImg         *ebiten.Image
 	EmptyBeerImg        *ebiten.Image
@@ -90,18 +91,28 @@ var (
 
 	testMapDense    [][]uint8
 	SimulationImage *ebiten.Image
+
+	pastSliderValue     float64
+	absDifference       int
+	alreadyOrdered      bool
+	agentAlreadyOrdered []int
+
+	nAgentsWished int
+	nAgentsMax    int
 )
 
 func (v *View) Update() error {
 	if v.CurrentMode == ModeMove {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			x, y := ebiten.CursorPosition()
-			if v.draggingPos == [2]int{-1, -1} {
-				v.draggingPos = [2]int{x, y}
-				v.draggingCameraPos = [2]int{int(v.cameraX), int(v.cameraY)}
+			if ((y <= 0) || (y >= 100)) && ((x <= 140) || (x >= 179)) {
+				if v.draggingPos == [2]int{-1, -1} {
+					v.draggingPos = [2]int{x, y}
+					v.draggingCameraPos = [2]int{int(v.cameraX), int(v.cameraY)}
+				}
+				v.cameraX = v.draggingCameraPos[0] + v.draggingPos[0] - x
+				v.cameraY = v.draggingCameraPos[1] + v.draggingPos[1] - y
 			}
-			v.cameraX = v.draggingCameraPos[0] + v.draggingPos[0] - x
-			v.cameraY = v.draggingCameraPos[1] + v.draggingPos[1] - y
 		} else {
 			v.draggingPos = [2]int{-1, -1}
 		}
@@ -164,6 +175,21 @@ func (v *View) Update() error {
 
 	v.ui.Update()
 
+	v.sim.Environment.Update()
+	v.sim.NAgents = len(v.sim.Environment.Agents)
+
+	//remove agents from list agentAlreadyOrdered
+	for i, ID := range agentAlreadyOrdered {
+		found := false
+		for _, agent := range v.sim.Environment.Agents {
+			if ID == agent.ID {
+				found = true
+			}
+		}
+		if found == false {
+			agentAlreadyOrdered = append(agentAlreadyOrdered[:i], agentAlreadyOrdered[i+1:]...)
+		}
+	}
 	//agt := v.sim.Environment.Agents[shownAgent]
 	// print drink and bladder contents
 	//fmt.Printf("Drink: %f, Bladder: %f, Blood alcohol: g/L\n", agt.DrinkContents, agt.BladderContents, agt.BloodAlcoholLevel)
@@ -345,6 +371,14 @@ func (v *View) Draw(screen *ebiten.Image) {
 		SimulationImage.DrawImage(BarDispenserTexture, optsBar)
 	}
 
+	for _, Exit := range v.sim.Environment.MapSparse.Exit {
+		ebitenvector.DrawFilledCircle(SimulationImage, float32(Exit[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Exit[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 255, G: 100, B: 100, A: 255}, false)
+	}
+
+	for _, Enter := range v.sim.Environment.MapSparse.Enter {
+		ebitenvector.DrawFilledCircle(SimulationImage, float32(Enter[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Enter[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 100, G: 220, B: 220, A: 255}, false)
+	}
+
 	// draw agents, their position and their goals
 	for i := 0; i < v.sim.NAgents; i++ {
 		// draw agent
@@ -379,7 +413,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 
 		if i == shownAgent {
 			//color = colornames.Red
-			textarea.SetText(fmt.Sprintf("verre actuel : %.2f \n\n vessie :%.2f ", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents))
+			textarea.SetText(fmt.Sprintf("verre actuel : %.2f \n\n vessie :%.2f \n\n nombre d'agent voulu:%d \n\n nombre d'agent actuel:%d", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents, nAgentsWished, v.sim.NAgents))
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Scale(float64(v.cameraZoom), float64(v.cameraZoom))
 			opts.GeoM.Translate(v.sim.Environment.Agents[i].X*float64(sizeX)+7-float64(v.cameraX), v.sim.Environment.Agents[i].Y*float64(sizeY)-float64(v.cameraY))
@@ -482,11 +516,13 @@ func init() {
 }
 
 func main() {
+
 	ebiten.SetWindowSize(ScreenWidth, ScreenHeight)
 	ebiten.SetWindowTitle("Pic")
 
 	SimulationImage = ebiten.NewImage(ScreenWidth, ScreenHeight)
 
+	nAgentsMax = 1000
 	// load font
 	tt, err := opentype.Parse(fonts.MPlus1pRegular_ttf)
 	if err != nil {
@@ -530,11 +566,14 @@ func main() {
 		testMapDense[wall[1]][wall[0]] = 1
 	}
 
-	nAgents := 200
-	nBarmen := 5
+	nAgents := 100
+	nBarmans := 10
+
+	pastSliderValue = float64(nAgents)
+	agentAlreadyOrdered = make([]int, 0, nAgentsMax)
 
 	// initialize animation steps
-	agentAnimationSteps = make([]float64, nAgents)
+	agentAnimationSteps = make([]float64, nAgentsMax)
 
 	// initialize animations
 	for k := 0; k < 7; k++ {
@@ -551,7 +590,7 @@ func main() {
 	// initialize last directions
 	agentLastDirections = make([]int, nAgents)
 
-	env := simulation.NewEnvironment(testmap, testMapDense, nAgents, nBarmen)
+	env := simulation.NewEnvironment(testmap, testMapDense, nAgents, nBarmans)
 	sim := simulation.Simulation{
 		Environment: env,
 		NAgents:     nAgents,
@@ -563,9 +602,30 @@ func main() {
 
 		// the container will use an anchor layout to layout its single child widget
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
-			widget.RowLayoutOpts.Direction(widget.DirectionVertical),
+			widget.RowLayoutOpts.Direction(widget.DirectionHorizontal),
 		)),
 	)
+
+	// initialize last directions
+	agentLastDirections = make([]int, nAgentsMax)
+
+	env := simulation.NewEnvironment(testmap, testMapDense, nAgents, nBarmans)
+	sim := simulation.Simulation{
+		Environment: env,
+		NAgents:     nAgents,
+		NBarmans:    nBarmans,
+	}
+
+	ui := ebitenui.UI{
+		Container: rootContainer,
+	}
+
+	view := View{
+		sim:        &sim,
+		cameraZoom: 1,
+		ui:         &ui,
+	}
+
 	// construct a textarea
 	textarea = widget.NewTextArea(
 		widget.TextAreaOpts.ContainerOpts(
@@ -624,8 +684,10 @@ func main() {
 			isOpen = !isOpen
 			if isOpen {
 				rootContainer.AddChild(textarea)
+				rootContainer.AddChild(slider)
 			} else {
 				rootContainer.RemoveChild(textarea)
+				rootContainer.RemoveChild(slider)
 			}
 		}),
 		widget.ButtonOpts.WidgetOpts(
@@ -636,19 +698,85 @@ func main() {
 			}),
 		),
 	)
-	// add the textarea as a child of the container
+	// construct a slider
+	slider = widget.NewSlider(
+		// Set the slider orientation - n/s vs e/w
+		widget.SliderOpts.Direction(widget.DirectionVertical),
+		// Set the minimum and maximum value for the slider
+		widget.SliderOpts.MinMax(nBarmans, nAgents*2),
+
+		widget.SliderOpts.WidgetOpts(
+			// Set the widget's dimensions
+			widget.WidgetOpts.MinSize(3, 150),
+		),
+		widget.SliderOpts.Images(
+			// Set the track images
+			&widget.SliderTrackImage{
+				Idle:  image.NewNineSliceColor(color.NRGBA{100, 100, 100, 255}),
+				Hover: image.NewNineSliceColor(color.NRGBA{100, 100, 100, 255}),
+			},
+			// Set the handle images
+			&widget.ButtonImage{
+				Idle:    image.NewNineSliceColor(color.NRGBA{255, 100, 100, 255}),
+				Hover:   image.NewNineSliceColor(color.NRGBA{255, 100, 100, 255}),
+				Pressed: image.NewNineSliceColor(color.NRGBA{255, 100, 100, 255}),
+			},
+		),
+		// Set the size of the handle
+		widget.SliderOpts.FixedHandleSize(3),
+		// Set the offset to display the track
+		widget.SliderOpts.TrackOffset(0),
+		// Set the size to move the handle
+		widget.SliderOpts.PageSizeFunc(func() int {
+			return 1
+		}),
+		// Set the callback to call when the slider value is changed
+		widget.SliderOpts.ChangedHandler(func(args *widget.SliderChangedEventArgs) {
+			nAgentsWished = args.Current
+			if (float64(args.Current) - pastSliderValue) < 0 {
+				absDifference = int(math.Abs(float64(args.Current) - pastSliderValue))
+				for i := 0; i < absDifference; {
+					for _, agent := range view.sim.Environment.Agents {
+						if agent.TypeAgent == simulation.ClientTypeAgent {
+
+							alreadyOrdered = false
+							for _, agentID := range agentAlreadyOrdered {
+								if agent.ID == agentID {
+									alreadyOrdered = true
+									break
+								}
+							}
+							if !alreadyOrdered {
+								agentAlreadyOrdered = append(agentAlreadyOrdered, agent.ID)
+								agent.PerceptExitChannel <- simulation.GoToExit
+								i++
+								break
+
+							}
+							alreadyOrdered = false
+
+						}
+					}
+
+				}
+			} else {
+				absDifference = int(float64(args.Current) - pastSliderValue)
+				for i := 0; i < absDifference; i++ {
+					view.sim.NAgents++
+					newAgent := simulation.NewAgent(view.sim.NAgents, simulation.ClientTypeAgent, testMapDense, &testmap, view.sim.Environment.PerceptChannel, true)
+					view.sim.Environment.Agents = append(view.sim.Environment.Agents, newAgent)
+					go view.sim.Environment.Agents[view.sim.NAgents-1].Run()
+				}
+			}
+			pastSliderValue = float64(args.Current)
+		}),
+	)
+	// Set the current value of the slider
+	slider.Current = nAgents
+
 	rootContainer.AddChild(openButton)
 	rootContainer.AddChild(textarea)
-
-	ui := ebitenui.UI{
-		Container: rootContainer,
-	}
-
-	view := View{
-		sim:        &sim,
-		cameraZoom: 1,
-		ui:         &ui,
-	}
+	rootContainer.AddChild(slider)
 
 	sim.Start()
 	go env.PerceptRequestsHandler()

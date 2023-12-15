@@ -42,6 +42,7 @@ func (g *Game) Update() error {
 			draggingPos = [2]int{-1, -1}
 		}
 	}
+
 	// on click, add wall if wall mode
 	if g.CurrentMode == ModeWall && !stopPropagation {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
@@ -169,6 +170,38 @@ func (g *Game) Update() error {
 		}
 	}
 
+	// on click, add Exit if Exit mode
+	if g.CurrentMode == Exit && !stopPropagation {
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			x, y := ebiten.CursorPosition()
+			// if wall,beer,toilet does not already exist at this position
+			exists := g.IsCaseTaken(x, y)
+			if !exists {
+				g.Map.Exit = append(g.Map.Exit, [2]int{
+					int(float32(x+g.CameraX) / 10),
+					int(float32(y+g.CameraY) / 10),
+				})
+			}
+
+		}
+	}
+
+	// on click, add Enter if Enter mode
+	if g.CurrentMode == Enter && !stopPropagation {
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			x, y := ebiten.CursorPosition()
+			// if wall,beer,toilet does not already exist at this position
+			exists := g.IsCaseTaken(x, y)
+			if !exists {
+				g.Map.Enter = append(g.Map.Enter, [2]int{
+					int(float32(x+g.CameraX) / 10),
+					int(float32(y+g.CameraY) / 10),
+				})
+			}
+
+		}
+	}
+
 	// on click, remove wall if erase mode
 	if g.CurrentMode == ModeErase && !stopPropagation {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
@@ -216,6 +249,18 @@ func (g *Game) Update() error {
 					break
 				}
 			}
+			for i, Exit := range g.Map.Exit {
+				if Exit[0] == int(float32(x+g.CameraX)/10) && Exit[1] == int(float32(y+g.CameraY)/10) {
+					g.Map.Exit = append(g.Map.Exit[:i], g.Map.Exit[i+1:]...)
+					break
+				}
+			}
+			for i, Enter := range g.Map.Enter {
+				if Enter[0] == int(float32(x+g.CameraX)/10) && Enter[1] == int(float32(y+g.CameraY)/10) {
+					g.Map.Enter = append(g.Map.Enter[:i], g.Map.Enter[i+1:]...)
+					break
+				}
+			}
 		}
 	}
 	return nil
@@ -254,6 +299,16 @@ func (g *Game) IsCaseTaken(x int, y int) bool {
 	}
 	for _, counterArea := range g.Map.CounterArea {
 		if counterArea[0] == int(float32(x+g.CameraX)/10) && counterArea[1] == int(float32(y+g.CameraY)/10) {
+			return true
+		}
+	}
+	for _, Exit := range g.Map.Exit {
+		if Exit[0] == int(float32(x+g.CameraX)/10) && Exit[1] == int(float32(y+g.CameraY)/10) {
+			return true
+		}
+	}
+	for _, Enter := range g.Map.Enter {
+		if Enter[0] == int(float32(x+g.CameraX)/10) && Enter[1] == int(float32(y+g.CameraY)/10) {
 			return true
 		}
 	}
@@ -393,5 +448,42 @@ func (g *Game) DrawMap(screen *ebiten.Image) {
 			false,
 		)
 	}
+	// draw CounterArea
+	for _, CounterArea := range g.Map.CounterArea {
+		vector.DrawFilledRect(
+			screen,
+			float32(CounterArea[0])*10-float32(g.CameraX),
+			float32(CounterArea[1])*10-float32(g.CameraY),
+			10,
+			10,
+			color.RGBA{R: 255, G: 255, B: 0, A: 255},
+			false,
+		)
+	}
 
+	// draw Exit
+	for _, Exit := range g.Map.Exit {
+		vector.DrawFilledRect(
+			screen,
+			float32(Exit[0])*10-float32(g.CameraX),
+			float32(Exit[1])*10-float32(g.CameraY),
+			10,
+			10,
+			color.RGBA{R: 255, G: 100, B: 100, A: 255},
+			false,
+		)
+	}
+
+	// draw Enter
+	for _, Enter := range g.Map.Enter {
+		vector.DrawFilledRect(
+			screen,
+			float32(Enter[0])*10-float32(g.CameraX),
+			float32(Enter[1])*10-float32(g.CameraY),
+			10,
+			10,
+			color.RGBA{R: 100, G: 220, B: 220, A: 255},
+			false,
+		)
+	}
 }
