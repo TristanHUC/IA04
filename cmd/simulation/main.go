@@ -530,8 +530,8 @@ func main() {
 		testMapDense[wall[1]][wall[0]] = 1
 	}
 
-	nAgents := 60
-	nBarmen := 4
+	nAgents := 200
+	nBarmen := 5
 
 	// initialize animation steps
 	agentAnimationSteps = make([]float64, nAgents)
@@ -570,14 +570,14 @@ func main() {
 	textarea = widget.NewTextArea(
 		widget.TextAreaOpts.ContainerOpts(
 			widget.ContainerOpts.WidgetOpts(
-				//Set the layout data for the textarea
-				//including a max height to ensure the scroll bar is visible
+				// Set the layout data for the textarea
+				// including a max height to ensure the scroll bar is visible
 				widget.WidgetOpts.LayoutData(widget.RowLayoutData{
 					Position:  widget.RowLayoutPositionStart,
 					MaxWidth:  150,
 					MaxHeight: 150,
 				}),
-				//Set the minimum size for the widget
+				// Set the minimum size for the widget
 				widget.WidgetOpts.MinSize(150, 150),
 			),
 		),

@@ -7,6 +7,7 @@ import (
 	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
 	"math"
 	"math/rand"
+	"reflect"
 	"time"
 )
 
@@ -74,7 +75,7 @@ func NewAgent(behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, 
 		picMapSparse:      picMapSparse,
 		lastExecutionTime: time.Now(),
 		DrinkContents:     0, // in milliliters
-		timeBetweenDrinks: time.Duration(rand.Intn(2)) * time.Second,
+		timeBetweenDrinks: time.Duration((rand.NormFloat64()+100)*100.0) * time.Second,
 		drinkSpeed:        0.1,
 		drinkEmptyTime:    time.Now(),
 		BladderContents:   0, // in milliliters
@@ -121,7 +122,15 @@ func (a *Agent) Run() {
 				}
 			}
 			// agent reflexes
-			err := a.calculatePosition()
+			wallInteractionDistanceMultiplier := 1.
+			if reflect.TypeOf(a.behavior) == reflect.TypeOf(BarmanBehavior{}) {
+				wallInteractionDistanceMultiplier = 1.5
+			}
+			agentStrengthMultiplier := 1.
+			if a.action == WaitForBeer {
+				agentStrengthMultiplier = 20
+			}
+			err := a.calculatePosition(wallInteractionDistanceMultiplier, 1, agentStrengthMultiplier)
 			if err != nil {
 				fmt.Errorf("error calculating position: %v", err)
 			}
@@ -165,7 +174,11 @@ func (a *Agent) calculatePath() error {
 	return nil
 }
 
-func (a *Agent) calculatePosition() error {
+func (a *Agent) calculatePosition(
+	wallInteractionDistanceMultiplier float64,
+	wallInteractionStrengthMultiplier float64,
+	agentStrengthMultiplier float64,
+) error {
 	var wayPoint *jps.Node
 
 	// move agent towards current waypoint at a speed of 2px per frame
@@ -192,7 +205,7 @@ func (a *Agent) calculatePosition() error {
 		gamma := 0.2
 		n := 2.0
 		np := 3.0
-		factor := 1.0
+		factor := 1.0 * agentStrengthMultiplier
 
 		// pour ne pas recalculer la distance on pourrait la passer dans le channel via un dictionnaire ? A discuter
 		dist := math.Sqrt((a.X*factor-otherAgent.X*factor)*(a.X*factor-otherAgent.X*factor) + (a.Y*factor-otherAgent.Y*factor)*(a.Y*factor-otherAgent.Y*factor))
@@ -229,8 +242,8 @@ func (a *Agent) calculatePosition() error {
 		vectx = vectx / normeEucli
 		vecty = vecty / normeEucli
 
-		reactionMurX = vectx * (3e5 * math.Exp(-(normeEucli+0.5)/0.1))
-		reactionMurY = vecty * (3e5 * math.Exp(-(normeEucli+0.5)/0.1))
+		reactionMurX = vectx * (wallInteractionStrengthMultiplier * 3e5 * math.Exp(-(normeEucli+0.5*wallInteractionDistanceMultiplier)/0.1))
+		reactionMurY = vecty * (wallInteractionStrengthMultiplier * 3e5 * math.Exp(-(normeEucli+0.5*wallInteractionDistanceMultiplier)/0.1))
 
 		a.Vx -= reactionMurX
 		a.Vy -= reactionMurY
