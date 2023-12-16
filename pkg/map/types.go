@@ -14,6 +14,8 @@ const (
 	BarmenArea
 	ModeBeerTap
 	CounterArea
+	Exit
+	Enter
 )
 
 var modeToCursor = map[Mode]ebiten.CursorShapeType{
@@ -26,6 +28,8 @@ var modeToCursor = map[Mode]ebiten.CursorShapeType{
 	BarmenArea:  ebiten.CursorShapeCrosshair,
 	ModeBeerTap: ebiten.CursorShapeCrosshair,
 	CounterArea: ebiten.CursorShapeCrosshair,
+	Exit:        ebiten.CursorShapeCrosshair,
+	Enter:       ebiten.CursorShapeCrosshair,
 }
 
 type Map struct {
@@ -37,6 +41,8 @@ type Map struct {
 	BarmenArea        [][2]int
 	BeerTaps          [][2]int
 	CounterArea       [][2]int
+	Exit              [][2]int
+	Enter             [][2]int
 }
 
 type Button struct {

@@ -22,16 +22,26 @@ const (
 	WaitForBeer
 	WaitForClient
 	GoToClient
+	GoToExit
+)
+
+//enum for the type of agent
+
+type TypeAgent int
+
+const (
+	ClientTypeAgent TypeAgent = iota
+	BarmanTypeAgent
 )
 
 type Behavior interface {
-	CoordinatesGenerator(m _map.Map) (float64, float64)
+	CoordinatesGenerator(m _map.Map, isLaterGenerated bool) (float64, float64)
 	Reflect(a *Agent)
 	Act(a *Agent)
 }
-
 type Agent struct {
-	X, Y, Vx, Vy, gx, gy, Speed, reactivity float64 // je pense qu'on peut retirer les Vx, vy, gx, gy, tx, ty des attributs
+	ID                                      int
+	X, Y, Vx, Vy, gx, gy, Speed, reactivity float64
 	tx, ty                                  float64
 	controllable                            bool
 	Path                                    []jps.Node
@@ -40,6 +50,7 @@ type Agent struct {
 	start                                   *jps.Node
 	channelAgent                            chan []*Agent
 	perceptChannel                          chan PerceptRequest
+	PerceptExitChannel                      chan Action
 	BeerChannel                             chan bool
 	picMapDense                             [][]uint8
 	picMapSparse                            *_map.Map
@@ -51,11 +62,13 @@ type Agent struct {
 	BladderContents                         float64
 	drinkSpeed                              float64
 	BloodAlcoholLevel                       float64
-	action                                  Action
-	behavior                                Behavior
+	Action                                  Action
+	Behavior                                Behavior
 	closeAgents                             []*Agent
 	client                                  *Agent
 	hasABarman                              bool
+	endOfLife                               bool
+	garbage                                 Action
 }
 
 type PerceptRequest struct {
@@ -63,30 +76,33 @@ type PerceptRequest struct {
 	ResponseChannel chan []*Agent
 }
 
-func NewAgent(behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest) *Agent {
+func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool) *Agent {
 	agent := &Agent{
-		Speed:             float64(rand.Intn(1)+1) / 30,
-		reactivity:        0.1,
-		controllable:      true,
-		channelAgent:      make(chan []*Agent, 1),
-		BeerChannel:       make(chan bool, 1),
-		perceptChannel:    perceptChannel,
-		picMapDense:       picMapDense,
-		picMapSparse:      picMapSparse,
-		lastExecutionTime: time.Now(),
-		DrinkContents:     0, // in milliliters
-		timeBetweenDrinks: time.Duration((rand.NormFloat64()+100)*100.0) * time.Second,
-		drinkSpeed:        0.1,
-		drinkEmptyTime:    time.Now(),
-		BladderContents:   0, // in milliliters
-		BloodAlcoholLevel: 0,
-		action:            None,
-		closeAgents:       make([]*Agent, 0),
-		client:            nil,
-		hasABarman:        false,
-		behavior:          behavior,
+		ID:                 ID,
+		Speed:              float64(rand.Intn(1)+1) / 30,
+		reactivity:         0.1,
+		controllable:       true,
+		channelAgent:       make(chan []*Agent, 1),
+		BeerChannel:        make(chan bool, 1),
+		perceptChannel:     perceptChannel,
+		PerceptExitChannel: make(chan Action, 1),
+		picMapDense:        picMapDense,
+		picMapSparse:       picMapSparse,
+		lastExecutionTime:  time.Now(),
+		DrinkContents:      0, // in milliliters
+		timeBetweenDrinks:  time.Duration(rand.Intn(2)) * time.Second,
+		drinkSpeed:         0.1,
+		drinkEmptyTime:     time.Now(),
+		BladderContents:    0, // in milliliters
+		BloodAlcoholLevel:  0,
+		Action:             None,
+		closeAgents:        make([]*Agent, 0),
+		client:             nil,
+		hasABarman:         false,
+		endOfLife:          false,
+		Behavior:           behavior,
 	}
-	agent.X, agent.Y = agent.behavior.CoordinatesGenerator(*picMapSparse)
+	agent.X, agent.Y = agent.Behavior.CoordinatesGenerator(*picMapSparse, isLaterGenerated)
 	return agent
 }
 
@@ -95,8 +111,14 @@ func (a *Agent) Percept() {
 	a.closeAgents = <-a.channelAgent
 }
 
+func (a *Agent) PerceptOrderExit() {
+	a.Action = <-a.PerceptExitChannel
+}
+
 func (a *Agent) Run() {
-	for {
+	pathNotCalculatedYet := true
+	go a.PerceptOrderExit()
+	for !a.endOfLife {
 		if a.lastExecutionTime.Add(17 * time.Millisecond).Before(time.Now()) {
 			a.Percept()
 			a.lastExecutionTime = time.Now()
@@ -104,8 +126,16 @@ func (a *Agent) Run() {
 			if a.BloodAlcoholLevel > 0.0001 {
 				a.BloodAlcoholLevel -= 0.0001
 			}
-			a.behavior.Reflect(a)
-			a.behavior.Act(a)
+			a.Behavior.Reflect(a)
+			a.Behavior.Act(a)
+
+			if (a.Action == GoToExit) && pathNotCalculatedYet {
+				pathNotCalculatedYet = false
+				err := a.calculatePath()
+				if err != nil {
+					fmt.Errorf("error calculating path: %v", err)
+				}
+			}
 
 			// if agent has no path but a goal is set, calculate path
 			if a.Goal != nil && a.Path == nil {
@@ -123,11 +153,11 @@ func (a *Agent) Run() {
 			}
 			// agent reflexes
 			wallInteractionDistanceMultiplier := 1.
-			if reflect.TypeOf(a.behavior) == reflect.TypeOf(BarmanBehavior{}) {
+			if reflect.TypeOf(a.Behavior) == reflect.TypeOf(BarmanBehavior{}) {
 				wallInteractionDistanceMultiplier = 1.5
 			}
 			agentStrengthMultiplier := 1.
-			if a.action == WaitForBeer {
+			if a.Action == WaitForBeer {
 				agentStrengthMultiplier = 20
 			}
 			err := a.calculatePosition(wallInteractionDistanceMultiplier, 1, agentStrengthMultiplier)

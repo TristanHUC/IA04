@@ -48,6 +48,12 @@ func (m *Map) LoadFromFile(filename string) error {
 			m.CounterArea = append(m.CounterArea, [2]int{column, m.Height})
 			m.Walls = append(m.Walls, [2]int{column, m.Height})
 		}
+		if c == 'e' {
+			m.Exit = append(m.Exit, [2]int{column, m.Height})
+		}
+		if c == 'd' {
+			m.Enter = append(m.Enter, [2]int{column, m.Height})
+		}
 		if c == '\n' {
 			m.Height++
 			if column > m.Width {
@@ -89,6 +95,34 @@ func (m *Map) SaveToFile(filename string) error {
 			maxYWall = float64(wall[1])
 		}
 	}
+	for _, entry := range m.Enter {
+		if float64(entry[0]) < minXWall {
+			minXWall = float64(entry[0])
+		}
+		if float64(entry[1]) < minYWall {
+			minYWall = float64(entry[1])
+		}
+		if float64(entry[0]) > maxXWall {
+			maxXWall = float64(entry[0])
+		}
+		if float64(entry[1]) > maxYWall {
+			maxYWall = float64(entry[1])
+		}
+	}
+	for _, exit := range m.Exit {
+		if float64(exit[0]) < minXWall {
+			minXWall = float64(exit[0])
+		}
+		if float64(exit[1]) < minYWall {
+			minYWall = float64(exit[1])
+		}
+		if float64(exit[0]) > maxXWall {
+			maxXWall = float64(exit[0])
+		}
+		if float64(exit[1]) > maxYWall {
+			maxYWall = float64(exit[1])
+		}
+	}
 
 	for y := int(minYWall); y <= int(maxYWall); y++ {
 		for x := int(minXWall); x <= int(maxXWall); x++ {
@@ -99,6 +133,8 @@ func (m *Map) SaveToFile(filename string) error {
 			isBarmenArea := false
 			isBeerTap := false
 			isCounterArea := false
+			isExit := false
+			isEnter := false
 			isEmpty := true
 
 			//adding wall to the map
@@ -180,6 +216,30 @@ func (m *Map) SaveToFile(filename string) error {
 			}
 			if isBeerTap {
 				f.Write([]byte{'t'})
+				isEmpty = false
+			}
+
+			//adding Exit to the map
+			for _, Exit := range m.Exit {
+				if Exit[0] == x && Exit[1] == y {
+					isExit = true
+					break
+				}
+			}
+			if isExit {
+				f.Write([]byte{'e'})
+				isEmpty = false
+			}
+
+			//adding Enter to the map
+			for _, Enter := range m.Enter {
+				if Enter[0] == x && Enter[1] == y {
+					isEnter = true
+					break
+				}
+			}
+			if isEnter {
+				f.Write([]byte{'d'})
 				isEmpty = false
 			}
 

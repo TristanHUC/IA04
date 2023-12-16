@@ -11,78 +11,115 @@ import (
 
 type ClientBehavior struct{}
 
-func (ClientBehavior) CoordinatesGenerator(m _map.Map) (float64, float64) {
-	x := rand.Intn(m.Width)
-	y := rand.Intn(m.Height)
-	coordsOk := false
-	// while agent is inside a wall, generate new coordinates
-	for !coordsOk {
-		coordsOk = true
-		for _, wall := range m.Walls {
-			if wall[0] == x && wall[1] == y {
-				x = rand.Intn(m.Width)
-				y = rand.Intn(m.Height)
-				coordsOk = false
-			}
+// CoordinatesGenerator for the client behavior generates coordinates inside the walls of the map
+func (ClientBehavior) CoordinatesGenerator(m _map.Map, isLaterGenerated bool) (float64, float64) {
+	var (
+		xFloat, yFloat float64
+		x, y           int
+	)
+
+	minWallX := math.Inf(1)
+	minWallY := math.Inf(1)
+	maxWallX := math.Inf(-1)
+	maxWallY := math.Inf(-1)
+
+	for _, wall := range m.Walls {
+		if float64(wall[0]) > maxWallX {
+			maxWallX = float64(wall[0])
+		} else if float64(wall[0]) < minWallX {
+			minWallX = float64(wall[0])
 		}
-		for _, counter := range m.BarmenArea {
-			if counter[0] == x && counter[1] == y {
-				x = rand.Intn(m.Width)
-				y = rand.Intn(m.Height)
-				coordsOk = false
-			}
+		if float64(wall[1]) > maxWallY {
+			maxWallY = float64(wall[1])
+		} else if float64(wall[1]) < minWallY {
+			minWallY = float64(wall[1])
 		}
 	}
-	xFloat := float64(x) + rand.Float64()
-	yFloat := float64(y) + rand.Float64()
+
+	if isLaterGenerated {
+		xFloat = float64(m.Enter[rand.Intn(len(m.Enter))][0])
+		yFloat = float64(m.Enter[rand.Intn(len(m.Enter))][1])
+	} else {
+		x = int(minWallX) + rand.Intn(int(maxWallX-minWallX))
+		y = int(minWallY) + rand.Intn(int(maxWallY-minWallY))
+		coordsOk := false
+		// while agent is inside a wall, generate new coordinates
+		for !coordsOk {
+			coordsOk = true
+			for _, wall := range m.Walls {
+				if wall[0] == x && wall[1] == y {
+					x = int(minWallX) + rand.Intn(int(maxWallX-minWallX))
+					y = int(minWallY) + rand.Intn(int(maxWallY-minWallY))
+					coordsOk = false
+				}
+			}
+			for _, counter := range m.BarmenArea {
+				if counter[0] == x && counter[1] == y {
+					x = int(minWallX) + rand.Intn(int(maxWallX-minWallX))
+					y = int(minWallY) + rand.Intn(int(maxWallY-minWallY))
+					coordsOk = false
+				}
+			}
+		}
+		xFloat = float64(x) + rand.Float64()
+		yFloat = float64(y) + rand.Float64()
+	}
 	return xFloat, yFloat
 }
 
 func (ClientBehavior) Reflect(a *Agent) {
-	if a.action != None { // doucement cabron, une action à la fois
+	if a.Action != None { // doucement cabron, une action à la fois
 		return
 	}
 	if a.BladderContents > 450 {
 		// go to toilet
-		a.action = GoToToilet
+		a.Action = GoToToilet
 	}
 	if !a.drinkEmptyTime.IsZero() && a.drinkEmptyTime.Add(a.timeBetweenDrinks).Before(a.lastExecutionTime) {
 		// go to bar
-		a.action = GoToBar
+		a.Action = GoToBar
 	}
 }
 
 func (ClientBehavior) Act(a *Agent) {
 	a.Drink()
+
+	// if agent have to leave
+	if a.Action == GoToExit && (a.Goal == nil || !slices.Contains(a.picMapSparse.Exit, [2]int{int(a.Goal.GetCol()), int(a.Goal.GetRow())})) {
+		exit := a.picMapSparse.Exit[rand.Intn(len(a.picMapSparse.Exit))]
+		g := jps.GetNode(exit[1], exit[0])
+		a.Goal = &g
+	}
+
 	// if agent want to go to toilet, and current goal does not reflect that, change goal
-	if a.action == GoToToilet && (a.Goal == nil || !slices.Contains(a.picMapSparse.ManToiletPoints, [2]int{int(a.Goal.GetCol()), int(a.Goal.GetRow())})) {
+	if a.Action == GoToToilet && (a.Goal == nil || !slices.Contains(a.picMapSparse.ManToiletPoints, [2]int{int(a.Goal.GetCol()), int(a.Goal.GetRow())})) {
 		toilet := a.picMapSparse.ManToiletPoints[rand.Intn(len(a.picMapSparse.ManToiletPoints))]
 		g := jps.GetNode(toilet[1], toilet[0])
 		a.Goal = &g
 	}
 
 	// if agent want to go to bar, and current goal does not reflect that, change goal
-	if a.action == GoToBar && (a.Goal == nil || !slices.Contains(a.picMapSparse.BarPoints, [2]int{int(a.Goal.GetCol()), int(a.Goal.GetRow())})) {
+	if a.Action == GoToBar && (a.Goal == nil || !slices.Contains(a.picMapSparse.BarPoints, [2]int{int(a.Goal.GetCol()), int(a.Goal.GetRow())})) {
 		bar := a.picMapSparse.BarPoints[rand.Intn(len(a.picMapSparse.BarPoints))]
 		g := jps.GetNode(bar[1], bar[0])
 		a.Goal = &g
 	}
 
 	// if agent wants to go to random spot, and current goal does not reflect that, change goal
-	if a.action == GoToRandomSpot && a.Goal == nil {
-		goalX, goalY := GenerateValidCoordinates(a.picMapSparse.Walls, a.picMapSparse.Width, a.picMapSparse.Height)
+	if a.Action == GoToRandomSpot && a.Goal == nil {
+		goalX, goalY := a.Behavior.CoordinatesGenerator(*a.picMapSparse, false)
 		g := jps.GetNode(int(goalY), int(goalX))
 		a.Goal = &g
 	}
 
 	// if agent has nothing to do, try to stay still
-	if a.action == None && a.Goal == nil {
+	if a.Action == None && a.Goal == nil {
 		goalX, goalY := a.X, a.Y
 		g := jps.GetNode(int(goalY), int(goalX))
 		a.Goal = &g
 	}
 
-	if a.action == None && a.Goal != nil {
+	if a.Action == None && a.Goal != nil {
 		vecToGoalX := float64(a.Goal.GetCol()) - a.X
 		vecToGoalY := float64(a.Goal.GetRow()) - a.Y
 		distToGoal := math.Sqrt(vecToGoalX*vecToGoalX + vecToGoalY*vecToGoalY)
@@ -95,27 +132,29 @@ func (ClientBehavior) Act(a *Agent) {
 	}
 
 	// if agent is waiting for a Beer, doesnt move even if he has reached his goal
-	if a.action == WaitForBeer && Distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
+	if a.Action == WaitForBeer && Distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
 		return
 	}
 
 	// if goal is reached
-	if a.action != None && a.Goal != nil && Distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
+	if a.Action != None && a.Goal != nil && Distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
 		a.Path = nil
 		a.CurrentWayPoint = 0
 		a.Goal = nil
-		if a.action == GoToToilet {
+		if a.Action == GoToExit {
+			a.endOfLife = true
+		} else if a.Action == GoToToilet {
 			a.BladderContents = 0
-			a.action = GoToRandomSpot
-		} else if a.action == GoToBar {
-			a.action = WaitForBeer
+			a.Action = GoToRandomSpot
+		} else if a.Action == GoToBar {
+			a.Action = WaitForBeer
 			go a.WaitForBeer()
 			// try to stay still
 			goalX, goalY := a.X, a.Y
 			g := jps.GetNode(int(goalY), int(goalX))
 			a.Goal = &g
-		} else if a.action == GoToRandomSpot {
-			a.action = None
+		} else if a.Action == GoToRandomSpot {
+			a.Action = None
 		}
 	}
 }
@@ -137,14 +176,18 @@ func (a *Agent) WaitForBeer() {
 	var response bool
 	response = <-a.BeerChannel
 	// a barman has chosen this client
+	// check if the client didn't decide to go home in the meantime
+	if a.Action != WaitForBeer {
+		return
+	}
 	if !response {
 		a.hasABarman = true
 		a.WaitForBeer()
 	} else {
 		a.DrinkContents = 300
 		a.hasABarman = false
-		a.action = GoToRandomSpot
-		goalX, goalY := GenerateValidCoordinates(a.picMapSparse.Walls, a.picMapSparse.Width, a.picMapSparse.Height)
+		a.Action = GoToRandomSpot
+		goalX, goalY := a.Behavior.CoordinatesGenerator(*a.picMapSparse, false)
 		g := jps.GetNode(int(goalY), int(goalX))
 		a.Goal = &g
 	}
