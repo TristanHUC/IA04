@@ -62,8 +62,8 @@ type Agent struct {
 	BladderContents                         float64
 	drinkSpeed                              float64
 	BloodAlcoholLevel                       float64
-	action                                  Action
-	behavior                                Behavior
+	Action                                  Action
+	Behavior                                Behavior
 	closeAgents                             []*Agent
 	client                                  *Agent
 	hasABarman                              bool
@@ -95,13 +95,14 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		drinkEmptyTime:     time.Now(),
 		BladderContents:    0, // in milliliters
 		BloodAlcoholLevel:  0,
-		action:             None,
+		Action:             None,
 		closeAgents:        make([]*Agent, 0),
 		client:             nil,
 		hasABarman:         false,
 		endOfLife:          false,
+		Behavior:           behavior,
 	}
-	agent.X, agent.Y = agent.behavior.CoordinatesGenerator(*picMapSparse, isLaterGenerated)
+	agent.X, agent.Y = agent.Behavior.CoordinatesGenerator(*picMapSparse, isLaterGenerated)
 	return agent
 }
 
@@ -111,7 +112,7 @@ func (a *Agent) Percept() {
 }
 
 func (a *Agent) PerceptOrderExit() {
-	a.action = <-a.PerceptExitChannel
+	a.Action = <-a.PerceptExitChannel
 }
 
 func (a *Agent) Run() {
@@ -125,10 +126,10 @@ func (a *Agent) Run() {
 			if a.BloodAlcoholLevel > 0.0001 {
 				a.BloodAlcoholLevel -= 0.0001
 			}
-			a.behavior.Reflect(a)
-			a.behavior.Act(a)
+			a.Behavior.Reflect(a)
+			a.Behavior.Act(a)
 
-			if (a.action == GoToExit) && pathNotCalculatedYet {
+			if (a.Action == GoToExit) && pathNotCalculatedYet {
 				pathNotCalculatedYet = false
 				err := a.calculatePath()
 				if err != nil {
@@ -152,11 +153,11 @@ func (a *Agent) Run() {
 			}
 			// agent reflexes
 			wallInteractionDistanceMultiplier := 1.
-			if reflect.TypeOf(a.behavior) == reflect.TypeOf(BarmanBehavior{}) {
+			if reflect.TypeOf(a.Behavior) == reflect.TypeOf(BarmanBehavior{}) {
 				wallInteractionDistanceMultiplier = 1.5
 			}
 			agentStrengthMultiplier := 1.
-			if a.action == WaitForBeer {
+			if a.Action == WaitForBeer {
 				agentStrengthMultiplier = 20
 			}
 			err := a.calculatePosition(wallInteractionDistanceMultiplier, 1, agentStrengthMultiplier)

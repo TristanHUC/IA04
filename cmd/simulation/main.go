@@ -20,6 +20,8 @@ import (
 	"image/color"
 	"log"
 	"math"
+	"reflect"
+	"time"
 )
 
 const (
@@ -92,13 +94,11 @@ var (
 	testMapDense    [][]uint8
 	SimulationImage *ebiten.Image
 
-	pastSliderValue     float64
-	absDifference       int
-	alreadyOrdered      bool
-	agentAlreadyOrdered []int
+	pastSliderValue float64
 
-	nAgentsWished int
-	nAgentsMax    int
+	nAgentsWished         int
+	lastAgentCreationTime time.Time
+	nAgentsMax            int
 )
 
 func (v *View) Update() error {
@@ -143,10 +143,8 @@ func (v *View) Update() error {
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
-		maxW := v.sim.Environment.MapSparse.Width
-		maxH := v.sim.Environment.MapSparse.Height
-		sizeX := float64(ScreenWidth / maxW)
-		sizeY := float64(ScreenHeight / maxH)
+		sizeX := 8.0
+		sizeY := 8.0
 		mapPosX := (float64(x) + float64(v.cameraX)) / (sizeX * v.cameraZoom)
 		mapPosY := (float64(y) + float64(v.cameraY)) / (sizeY * v.cameraZoom)
 		// find closest agent
@@ -178,21 +176,37 @@ func (v *View) Update() error {
 	v.sim.Environment.Update()
 	v.sim.NAgents = len(v.sim.Environment.Agents)
 
-	//remove agents from list agentAlreadyOrdered
-	for i, ID := range agentAlreadyOrdered {
-		found := false
-		for _, agent := range v.sim.Environment.Agents {
-			if ID == agent.ID {
-				found = true
-			}
-		}
-		if found == false {
-			agentAlreadyOrdered = append(agentAlreadyOrdered[:i], agentAlreadyOrdered[i+1:]...)
+	// if agents wished is bigger than the number of agents, create new agents
+	if nAgentsWished > len(v.sim.Environment.Agents) && time.Since(lastAgentCreationTime).Seconds() > 0.1 {
+		lastAgentCreationTime = time.Now()
+		v.sim.NAgents++
+		newAgent := simulation.NewAgent(v.sim.NAgents, simulation.ClientBehavior{}, v.sim.Environment.MapDense, &v.sim.Environment.MapSparse, v.sim.Environment.PerceptChannel, true)
+		v.sim.Environment.Agents = append(v.sim.Environment.Agents, newAgent)
+		go v.sim.Environment.Agents[v.sim.NAgents-1].Run()
+	}
+
+	// if agents wished is smaller than the number of agents, remove agents
+	nAgentsExiting := 0
+	for _, agent := range v.sim.Environment.Agents {
+		if agent.Action == simulation.GoToExit {
+			nAgentsExiting++
 		}
 	}
-	//agt := v.sim.Environment.Agents[shownAgent]
-	// print drink and bladder contents
-	//fmt.Printf("Drink: %f, Bladder: %f, Blood alcohol: g/L\n", agt.DrinkContents, agt.BladderContents, agt.BloodAlcoholLevel)
+	if nAgentsExiting < len(v.sim.Environment.Agents)-v.sim.NBarmans && nAgentsWished < len(v.sim.Environment.Agents)-nAgentsExiting {
+		for _, agent := range v.sim.Environment.Agents {
+			if reflect.TypeOf(agent.Behavior) != reflect.TypeOf(simulation.ClientBehavior{}) {
+				continue
+			}
+			if agent.Action != simulation.GoToExit {
+				agent.PerceptExitChannel <- simulation.GoToExit
+				nAgentsExiting++
+			}
+
+			if nAgentsWished >= len(v.sim.Environment.Agents)-nAgentsExiting {
+				break
+			}
+		}
+	}
 
 	return nil
 }
@@ -221,8 +235,8 @@ func (v *View) Draw(screen *ebiten.Image) {
 
 	maxW := v.sim.Environment.MapSparse.Width
 	maxH := v.sim.Environment.MapSparse.Height
-	sizeX := float32(ScreenWidth/maxW) * float32(v.cameraZoom)
-	sizeY := float32(ScreenHeight/maxH) * float32(v.cameraZoom)
+	sizeX := 8 * float32(v.cameraZoom)
+	sizeY := 8 * float32(v.cameraZoom)
 	// draw ground
 	for i := 0; i < maxH; i++ {
 		for j := 0; j < maxW; j++ {
@@ -390,7 +404,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 		opts.GeoM.Translate(v.sim.Environment.Agents[i].X*float64(sizeX)+float64(sizeX)/2-float64(v.cameraX), v.sim.Environment.Agents[i].Y*float64(sizeY)+float64(sizeY)/2-float64(v.cameraY))
 
 		speedNorm := simulation.Distance(v.sim.Environment.Agents[i].Vx, v.sim.Environment.Agents[i].Vy, 0, 0)
-		model := i % 7
+		model := v.sim.Environment.Agents[i].ID % 7
 		animationImage := agentAnimations[model][agentLastDirections[i]][0]
 		if speedNorm > 0.01 {
 			angle := simulation.VectToAngle(v.sim.Environment.Agents[i].Vx, -v.sim.Environment.Agents[i].Vy)
@@ -491,7 +505,7 @@ func init() {
 	FourOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer4Of5.png")
 
 	WomanToiletTexture, _, _ = ebitenutil.NewImageFromFile("assets/WomanToilet.png")
-	BarDispenserTexture, _, _ = ebitenutil.NewImageFromFile("assets/v2dispenser.png")
+	BarDispenserTexture, _, _ = ebitenutil.NewImageFromFile("assets/BarDispenser.png")
 
 	spriteSheet, _, _ = ebitenutil.NewImageFromFile("assets/spritesheet.png")
 	groundImg, _, _ = ebitenutil.NewImageFromFile("assets/ground.png")
@@ -547,18 +561,8 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	maxW := 0
-	maxH := 0
-	for _, wall := range testmap.Walls {
-		if wall[0] > maxW {
-			maxW = wall[0]
-		}
-		if wall[1] > maxH {
-			maxH = wall[1]
-		}
-	}
-	maxW++
-	maxH++
+	maxW := testmap.Width
+	maxH := testmap.Height
 	for i := 0; i < maxH; i++ {
 		testMapDense = append(testMapDense, make([]uint8, maxW))
 	}
@@ -567,10 +571,10 @@ func main() {
 	}
 
 	nAgents := 100
+	nAgentsWished = nAgents
 	nBarmans := 10
 
 	pastSliderValue = float64(nAgents)
-	agentAlreadyOrdered = make([]int, 0, nAgentsMax)
 
 	// initialize animation steps
 	agentAnimationSteps = make([]float64, nAgentsMax)
@@ -589,12 +593,6 @@ func main() {
 
 	// initialize last directions
 	agentLastDirections = make([]int, nAgents)
-
-	env := simulation.NewEnvironment(testmap, testMapDense, nAgents, nBarmans)
-	sim := simulation.Simulation{
-		Environment: env,
-		NAgents:     nAgents,
-	}
 
 	// Create the rootContainer with the NineSlice image as the background
 	rootContainer = widget.NewContainer(
@@ -733,41 +731,6 @@ func main() {
 		// Set the callback to call when the slider value is changed
 		widget.SliderOpts.ChangedHandler(func(args *widget.SliderChangedEventArgs) {
 			nAgentsWished = args.Current
-			if (float64(args.Current) - pastSliderValue) < 0 {
-				absDifference = int(math.Abs(float64(args.Current) - pastSliderValue))
-				for i := 0; i < absDifference; {
-					for _, agent := range view.sim.Environment.Agents {
-						if agent.TypeAgent == simulation.ClientTypeAgent {
-
-							alreadyOrdered = false
-							for _, agentID := range agentAlreadyOrdered {
-								if agent.ID == agentID {
-									alreadyOrdered = true
-									break
-								}
-							}
-							if !alreadyOrdered {
-								agentAlreadyOrdered = append(agentAlreadyOrdered, agent.ID)
-								agent.PerceptExitChannel <- simulation.GoToExit
-								i++
-								break
-
-							}
-							alreadyOrdered = false
-
-						}
-					}
-
-				}
-			} else {
-				absDifference = int(float64(args.Current) - pastSliderValue)
-				for i := 0; i < absDifference; i++ {
-					view.sim.NAgents++
-					newAgent := simulation.NewAgent(view.sim.NAgents, simulation.ClientTypeAgent, testMapDense, &testmap, view.sim.Environment.PerceptChannel, true)
-					view.sim.Environment.Agents = append(view.sim.Environment.Agents, newAgent)
-					go view.sim.Environment.Agents[view.sim.NAgents-1].Run()
-				}
-			}
 			pastSliderValue = float64(args.Current)
 		}),
 	)

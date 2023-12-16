@@ -95,6 +95,34 @@ func (m *Map) SaveToFile(filename string) error {
 			maxYWall = float64(wall[1])
 		}
 	}
+	for _, entry := range m.Enter {
+		if float64(entry[0]) < minXWall {
+			minXWall = float64(entry[0])
+		}
+		if float64(entry[1]) < minYWall {
+			minYWall = float64(entry[1])
+		}
+		if float64(entry[0]) > maxXWall {
+			maxXWall = float64(entry[0])
+		}
+		if float64(entry[1]) > maxYWall {
+			maxYWall = float64(entry[1])
+		}
+	}
+	for _, exit := range m.Exit {
+		if float64(exit[0]) < minXWall {
+			minXWall = float64(exit[0])
+		}
+		if float64(exit[1]) < minYWall {
+			minYWall = float64(exit[1])
+		}
+		if float64(exit[0]) > maxXWall {
+			maxXWall = float64(exit[0])
+		}
+		if float64(exit[1]) > maxYWall {
+			maxYWall = float64(exit[1])
+		}
+	}
 
 	for y := int(minYWall); y <= int(maxYWall); y++ {
 		for x := int(minXWall); x <= int(maxXWall); x++ {
@@ -188,18 +216,6 @@ func (m *Map) SaveToFile(filename string) error {
 			}
 			if isBeerTap {
 				f.Write([]byte{'t'})
-				isEmpty = false
-			}
-
-			//adding CounterArea to the map
-			for _, CounterArea := range m.CounterArea {
-				if CounterArea[0] == x && CounterArea[1] == y {
-					isCounterArea = true
-					break
-				}
-			}
-			if isCounterArea {
-				f.Write([]byte{'a'})
 				isEmpty = false
 			}
 
