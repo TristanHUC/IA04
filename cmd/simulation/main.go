@@ -505,7 +505,7 @@ func init() {
 	FourOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer4Of5.png")
 
 	WomanToiletTexture, _, _ = ebitenutil.NewImageFromFile("assets/WomanToilet.png")
-	BarDispenserTexture, _, _ = ebitenutil.NewImageFromFile("assets/BarDispenser.png")
+	BarDispenserTexture, _, _ = ebitenutil.NewImageFromFile("assets/v2dispenser.png")
 
 	spriteSheet, _, _ = ebitenutil.NewImageFromFile("assets/spritesheet.png")
 	groundImg, _, _ = ebitenutil.NewImageFromFile("assets/ground.png")
