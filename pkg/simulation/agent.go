@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/ankurjha7/jps"
 	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
-	"golang.org/x/exp/slices"
 	"math"
 	"math/rand"
+	"reflect"
 	"time"
 )
 
@@ -18,10 +18,30 @@ const (
 	GoToRandomSpot
 	GoToToilet
 	GoToBar
+	GoToBeerTap
+	WaitForBeer
+	WaitForClient
+	GoToClient
+	GoToExit
 )
 
+//enum for the type of agent
+
+type TypeAgent int
+
+const (
+	ClientTypeAgent TypeAgent = iota
+	BarmanTypeAgent
+)
+
+type Behavior interface {
+	CoordinatesGenerator(m _map.Map, isLaterGenerated bool) (float64, float64)
+	Reflect(a *Agent)
+	Act(a *Agent)
+}
 type Agent struct {
-	X, Y, Vx, Vy, gx, gy, Speed, reactivity float64 // je pense qu'on peut retirer les Vx, vy, gx, gy, tx, ty des attributs
+	ID                                      int
+	X, Y, Vx, Vy, gx, gy, Speed, reactivity float64
 	tx, ty                                  float64
 	controllable                            bool
 	Path                                    []jps.Node
@@ -30,6 +50,8 @@ type Agent struct {
 	start                                   *jps.Node
 	channelAgent                            chan []*Agent
 	perceptChannel                          chan PerceptRequest
+	PerceptExitChannel                      chan Action
+	BeerChannel                             chan bool
 	picMapDense                             [][]uint8
 	picMapSparse                            *_map.Map
 	rollingMeanMovement                     float64
@@ -40,7 +62,13 @@ type Agent struct {
 	BladderContents                         float64
 	drinkSpeed                              float64
 	BloodAlcoholLevel                       float64
-	action                                  Action
+	Action                                  Action
+	Behavior                                Behavior
+	closeAgents                             []*Agent
+	client                                  *Agent
+	hasABarman                              bool
+	endOfLife                               bool
+	garbage                                 Action
 }
 
 type PerceptRequest struct {
@@ -48,36 +76,67 @@ type PerceptRequest struct {
 	ResponseChannel chan []*Agent
 }
 
-func NewAgent(xStart, yStart float64, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest) *Agent {
-	return &Agent{
-		X:                 xStart,
-		Y:                 yStart,
-		Speed:             float64(rand.Intn(1)+1) / 30,
-		reactivity:        0.1,
-		controllable:      true,
-		channelAgent:      make(chan []*Agent, 1),
-		perceptChannel:    perceptChannel,
-		picMapDense:       picMapDense,
-		picMapSparse:      picMapSparse,
-		lastExecutionTime: time.Now(),
-		DrinkContents:     0, // in milliliters
-		timeBetweenDrinks: time.Duration(rand.Intn(2)) * time.Second,
-		drinkSpeed:        0.1,
-		drinkEmptyTime:    time.Now(),
-		BladderContents:   0, // in milliliters
-		BloodAlcoholLevel: 0,
-		action:            None,
+func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool) *Agent {
+	agent := &Agent{
+		ID:                 ID,
+		Speed:              float64(rand.Intn(1)+1) / 30,
+		reactivity:         0.1,
+		controllable:       true,
+		channelAgent:       make(chan []*Agent, 1),
+		BeerChannel:        make(chan bool, 1),
+		perceptChannel:     perceptChannel,
+		PerceptExitChannel: make(chan Action, 1),
+		picMapDense:        picMapDense,
+		picMapSparse:       picMapSparse,
+		lastExecutionTime:  time.Now(),
+		DrinkContents:      0, // in milliliters
+		timeBetweenDrinks:  time.Duration(rand.Intn(2)) * time.Second,
+		drinkSpeed:         0.1,
+		drinkEmptyTime:     time.Now(),
+		BladderContents:    0, // in milliliters
+		BloodAlcoholLevel:  0,
+		Action:             None,
+		closeAgents:        make([]*Agent, 0),
+		client:             nil,
+		hasABarman:         false,
+		endOfLife:          false,
+		Behavior:           behavior,
 	}
+	agent.X, agent.Y = agent.Behavior.CoordinatesGenerator(*picMapSparse, isLaterGenerated)
+	return agent
+}
+
+func (a *Agent) Percept() {
+	a.perceptChannel <- PerceptRequest{Agt: a, ResponseChannel: a.channelAgent}
+	a.closeAgents = <-a.channelAgent
+}
+
+func (a *Agent) PerceptOrderExit() {
+	a.Action = <-a.PerceptExitChannel
 }
 
 func (a *Agent) Run() {
-	for {
+	pathNotCalculatedYet := true
+	go a.PerceptOrderExit()
+	for !a.endOfLife {
 		if a.lastExecutionTime.Add(17 * time.Millisecond).Before(time.Now()) {
+			a.Percept()
 			a.lastExecutionTime = time.Now()
-			a.Drink()
-			a.BloodAlcoholLevel -= 0.0001
-			a.Reflect()
-			a.Act()
+
+			if a.BloodAlcoholLevel > 0.0001 {
+				a.BloodAlcoholLevel -= 0.0001
+			}
+			a.Behavior.Reflect(a)
+			a.Behavior.Act(a)
+
+			if (a.Action == GoToExit) && pathNotCalculatedYet {
+				pathNotCalculatedYet = false
+				err := a.calculatePath()
+				if err != nil {
+					fmt.Errorf("error calculating path: %v", err)
+				}
+			}
+
 			// if agent has no path but a goal is set, calculate path
 			if a.Goal != nil && a.Path == nil {
 				err := a.calculatePath()
@@ -93,96 +152,37 @@ func (a *Agent) Run() {
 				}
 			}
 			// agent reflexes
-			a.calculatePosition()
+			wallInteractionDistanceMultiplier := 1.
+			if reflect.TypeOf(a.Behavior) == reflect.TypeOf(BarmanBehavior{}) {
+				wallInteractionDistanceMultiplier = 1.5
+			}
+			agentStrengthMultiplier := 1.
+			if a.Action == WaitForBeer {
+				agentStrengthMultiplier = 20
+			}
+			err := a.calculatePosition(wallInteractionDistanceMultiplier, 1, agentStrengthMultiplier)
+			if err != nil {
+				fmt.Errorf("error calculating position: %v", err)
+			}
 		} else {
 			time.Sleep(1 * time.Millisecond)
 		}
 	}
 }
 
-func (a *Agent) Act() {
-	// if agent want to go to toilet, and current goal does not reflect that, change goal
-	if a.action == GoToToilet && (a.Goal == nil || !slices.Contains(a.picMapSparse.ManToiletPoints, [2]int{int(a.Goal.GetCol()), int(a.Goal.GetRow())})) {
-		toilet := a.picMapSparse.ManToiletPoints[rand.Intn(len(a.picMapSparse.ManToiletPoints))]
-		g := jps.GetNode(toilet[1], toilet[0])
-		a.Goal = &g
-	}
-
-	// if agent want to go to bar, and current goal does not reflect that, change goal
-	if a.action == GoToBar && (a.Goal == nil || !slices.Contains(a.picMapSparse.BarPoints, [2]int{int(a.Goal.GetCol()), int(a.Goal.GetRow())})) {
-		bar := a.picMapSparse.BarPoints[rand.Intn(len(a.picMapSparse.BarPoints))]
-		g := jps.GetNode(bar[1], bar[0])
-		a.Goal = &g
-	}
-
-	// if agent wants to go to random spot, and current goal does not reflect that, change goal
-	if a.action == GoToRandomSpot && a.Goal == nil {
-		goalX, goalY := GenerateValidCoordinates(a.picMapSparse.Walls, a.picMapSparse.Width, a.picMapSparse.Height)
-		g := jps.GetNode(int(goalY), int(goalX))
-		a.Goal = &g
-	}
-
-	// if agent has nothing to do, try to stay still
-	if a.action == None && a.Goal == nil {
-		goalX, goalY := a.X, a.Y
-		g := jps.GetNode(int(goalY), int(goalX))
-		a.Goal = &g
-	}
-
-	if a.action == None && a.Goal != nil {
-		vecToGoalX := float64(a.Goal.GetCol()) - a.X
-		vecToGoalY := float64(a.Goal.GetRow()) - a.Y
-		distToGoal := math.Sqrt(vecToGoalX*vecToGoalX + vecToGoalY*vecToGoalY)
-		if distToGoal > 2 {
-			goalX, goalY := a.X, a.Y
-			g := jps.GetNode(int(goalY), int(goalX))
-			a.Goal = &g
-			a.Path = nil
+// GetClosestBarmenArea returns the closest barmen area to a given client
+func (a *Agent) GetClosestBarmenArea(client Agent) jps.Node {
+	var closestBarmenArea [2]int
+	var minDistance float64 = 100000
+	var distance float64
+	for _, barmenArea := range a.picMapSparse.BarmenArea {
+		distance = distanceInt(barmenArea[0], barmenArea[1], int(client.X), int(client.Y))
+		if distance < minDistance {
+			minDistance = distance
+			closestBarmenArea = barmenArea
 		}
 	}
-
-	// if goal is reached
-	if a.action != None && a.Goal != nil && Distance(a.X, a.Y, float64(a.Goal.GetCol()), float64(a.Goal.GetRow())) < 1 {
-		a.Path = nil
-		a.CurrentWayPoint = 0
-		a.Goal = nil
-		if a.action == GoToToilet {
-			a.BladderContents = 0
-			a.action = GoToRandomSpot
-		} else if a.action == GoToBar {
-			a.DrinkContents = 330
-			a.drinkEmptyTime = time.Time{}
-			a.action = GoToRandomSpot
-		} else if a.action == GoToRandomSpot {
-			a.action = None
-		}
-	}
-}
-
-func (a *Agent) Drink() {
-	if a.DrinkContents >= a.drinkSpeed {
-		a.DrinkContents -= a.drinkSpeed
-		a.BladderContents += a.drinkSpeed
-		// 1000 for ml -> l, 0.07 for alcohol percentage, 0.78 alcohol density, 5 for liters in the body
-		a.BloodAlcoholLevel += (a.drinkSpeed * 1000) * 0.07 * 0.78 / 5
-	} else if a.drinkEmptyTime.IsZero() {
-		// if drink just finished, set time
-		a.drinkEmptyTime = time.Now()
-	}
-}
-
-func (a *Agent) Reflect() {
-	if a.action != None { // doucement cabron, une action à la fois
-		return
-	}
-	if a.BladderContents > 450 {
-		// go to toilet
-		a.action = GoToToilet
-	}
-	if !a.drinkEmptyTime.IsZero() && a.drinkEmptyTime.Add(a.timeBetweenDrinks).Before(a.lastExecutionTime) {
-		// go to bar
-		a.action = GoToBar
-	}
+	return jps.GetNode(closestBarmenArea[1], closestBarmenArea[0])
 }
 
 func (a *Agent) calculatePath() error {
@@ -204,7 +204,11 @@ func (a *Agent) calculatePath() error {
 	return nil
 }
 
-func (a *Agent) calculatePosition() error {
+func (a *Agent) calculatePosition(
+	wallInteractionDistanceMultiplier float64,
+	wallInteractionStrengthMultiplier float64,
+	agentStrengthMultiplier float64,
+) error {
 	var wayPoint *jps.Node
 
 	// move agent towards current waypoint at a speed of 2px per frame
@@ -225,16 +229,13 @@ func (a *Agent) calculatePosition() error {
 	}
 
 	// change velocity to avoid other agents following moussaïd 2009
-	var closeAgents []*Agent
-	a.perceptChannel <- PerceptRequest{Agt: a, ResponseChannel: a.channelAgent}
-	closeAgents = <-a.channelAgent
-	for _, otherAgent := range closeAgents {
+	for _, otherAgent := range a.closeAgents {
 		lambda := 2.0
 		A := 4.5
 		gamma := 0.2
 		n := 2.0
 		np := 3.0
-		factor := 1.0
+		factor := 1.0 * agentStrengthMultiplier
 
 		// pour ne pas recalculer la distance on pourrait la passer dans le channel via un dictionnaire ? A discuter
 		dist := math.Sqrt((a.X*factor-otherAgent.X*factor)*(a.X*factor-otherAgent.X*factor) + (a.Y*factor-otherAgent.Y*factor)*(a.Y*factor-otherAgent.Y*factor))
@@ -271,8 +272,8 @@ func (a *Agent) calculatePosition() error {
 		vectx = vectx / normeEucli
 		vecty = vecty / normeEucli
 
-		reactionMurX = vectx * (3e5 * math.Exp(-(normeEucli+0.5)/0.1))
-		reactionMurY = vecty * (3e5 * math.Exp(-(normeEucli+0.5)/0.1))
+		reactionMurX = vectx * (wallInteractionStrengthMultiplier * 3e5 * math.Exp(-(normeEucli+0.5*wallInteractionDistanceMultiplier)/0.1))
+		reactionMurY = vecty * (wallInteractionStrengthMultiplier * 3e5 * math.Exp(-(normeEucli+0.5*wallInteractionDistanceMultiplier)/0.1))
 
 		a.Vx -= reactionMurX
 		a.Vy -= reactionMurY

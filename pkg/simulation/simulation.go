@@ -2,6 +2,7 @@ package simulation
 
 type Simulation struct {
 	NAgents     int
+	NBarmans    int
 	Environment *Environment
 }
 

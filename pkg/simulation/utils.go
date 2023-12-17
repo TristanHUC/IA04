@@ -58,3 +58,7 @@ func VectToAngle(x, y float64) float64 {
 	angle = math.Mod(angle, 2*math.Pi)
 	return angle
 }
+
+func distanceInt(x1, y1, x2, y2 int) float64 {
+	return math.Sqrt(math.Pow(float64(x1-x2), 2) + math.Pow(float64(y1-y2), 2))
+}

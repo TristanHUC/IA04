@@ -11,17 +11,25 @@ type Environment struct {
 	Agents         []*Agent
 }
 
-func NewEnvironment(sparseMap _map.Map, denseMap [][]uint8, nAgents int) *Environment {
+func NewEnvironment(sparseMap _map.Map, denseMap [][]uint8, nAgents int, nBarmans int) *Environment {
 	env := Environment{
 		MapSparse:      sparseMap,
 		MapDense:       denseMap,
 		PerceptChannel: make(chan PerceptRequest, 1),
 		Agents:         make([]*Agent, nAgents),
 	}
-	for i := 0; i < nAgents; i++ {
-		x, y := GenerateValidCoordinates(sparseMap.Walls, sparseMap.Width, sparseMap.Height)
-		env.Agents[i] = NewAgent(float64(x), float64(y), denseMap, &sparseMap, env.PerceptChannel)
+	//for i := 0; i < nAgents; i++ {
+	//	x, y := GenerateValidCoordinates(sparseMap.Walls, sparseMap.Width, sparseMap.Height)
+	//	env.Agents[i] = NewAgent(float64(x), float64(y), denseMap, &sparseMap, env.PerceptChannel)
+	//}
+	for iClient := 0; iClient < nAgents-nBarmans; iClient++ {
+		env.Agents[iClient] = NewAgent(iClient, ClientBehavior{}, denseMap, &sparseMap, env.PerceptChannel, false)
 	}
+	for iBarman := nAgents - nBarmans; iBarman < nAgents; iBarman++ {
+		env.Agents[iBarman] = NewAgent(iBarman, BarmanBehavior{}, denseMap, &sparseMap, env.PerceptChannel, false)
+	}
+
+	//
 	return &env
 }
 
@@ -40,6 +48,15 @@ func (e *Environment) PerceptRequestsHandler() {
 		select {
 		case perceptRequest := <-e.PerceptChannel:
 			perceptRequest.ResponseChannel <- e.GetNearbyAgents(perceptRequest.Agt)
+
+		}
+	}
+}
+
+func (e *Environment) Update() {
+	for i, agent := range e.Agents {
+		if agent.endOfLife == true {
+			e.Agents = append(e.Agents[:i], e.Agents[i+1:]...)
 		}
 	}
 }
