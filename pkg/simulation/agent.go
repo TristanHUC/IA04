@@ -68,7 +68,7 @@ type Agent struct {
 	client                                  *Agent
 	hasABarman                              bool
 	endOfLife                               bool
-	garbage                                 Action
+	Paused                                  bool
 }
 
 type PerceptRequest struct {
@@ -119,6 +119,10 @@ func (a *Agent) Run() {
 	pathNotCalculatedYet := true
 	go a.PerceptOrderExit()
 	for !a.endOfLife {
+		if a.Paused {
+			time.Sleep(1 * time.Millisecond)
+			continue
+		}
 		if a.lastExecutionTime.Add(17 * time.Millisecond).Before(time.Now()) {
 			a.Percept()
 			a.lastExecutionTime = time.Now()

@@ -128,6 +128,10 @@ func (v *View) Update() error {
 		v.showPaths = !v.showPaths
 	}
 
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		v.sim.TogglePause()
+	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
 		v.sim.Environment.Agents[shownAgent].Vy = -v.sim.Environment.Agents[shownAgent].Speed
 	}
@@ -406,7 +410,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 		speedNorm := simulation.Distance(v.sim.Environment.Agents[i].Vx, v.sim.Environment.Agents[i].Vy, 0, 0)
 		model := v.sim.Environment.Agents[i].ID % 7
 		animationImage := agentAnimations[model][agentLastDirections[i]][0]
-		if speedNorm > 0.01 {
+		if speedNorm > 0.01 && !v.sim.Paused {
 			angle := simulation.VectToAngle(v.sim.Environment.Agents[i].Vx, -v.sim.Environment.Agents[i].Vy)
 			sector := simulation.AngleTo8DirectionsSector(angle)
 			// in the spritesheet, the first direction is down and it rotates clockwise
@@ -430,21 +434,27 @@ func (v *View) Draw(screen *ebiten.Image) {
 			textarea.SetText(fmt.Sprintf("verre actuel : %.2f \n\n vessie :%.2f \n\n nombre d'agent voulu:%d \n\n nombre d'agent actuel:%d", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents, nAgentsWished, v.sim.NAgents))
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Scale(float64(v.cameraZoom), float64(v.cameraZoom))
-			opts.GeoM.Translate(v.sim.Environment.Agents[i].X*float64(sizeX)+7-float64(v.cameraX), v.sim.Environment.Agents[i].Y*float64(sizeY)-float64(v.cameraY))
-			switch {
-			case v.sim.Environment.Agents[i].DrinkContents <= 1:
-				SimulationImage.DrawImage(EmptyBeerImg, opts)
-			case v.sim.Environment.Agents[i].DrinkContents > 1 && v.sim.Environment.Agents[i].DrinkContents < 66:
-				SimulationImage.DrawImage(OneOfFiveBeerImg, opts)
-			case v.sim.Environment.Agents[i].DrinkContents >= 66 && v.sim.Environment.Agents[i].DrinkContents < 132:
-				SimulationImage.DrawImage(TwoOfFiveBeerImg, opts)
-			case v.sim.Environment.Agents[i].DrinkContents >= 132 && v.sim.Environment.Agents[i].DrinkContents < 198:
-				SimulationImage.DrawImage(ThreeOfFiveBeerImg, opts)
-			case v.sim.Environment.Agents[i].DrinkContents >= 198 && v.sim.Environment.Agents[i].DrinkContents < 264:
-				SimulationImage.DrawImage(FourOfFiveBeerImg, opts)
-			case v.sim.Environment.Agents[i].DrinkContents >= 264:
-				SimulationImage.DrawImage(FullBeerImg, opts)
-			}
+			opts.GeoM.Translate((v.sim.Environment.Agents[i].X+1)*float64(sizeX)-float64(v.cameraX), (v.sim.Environment.Agents[i].Y+1)*float64(sizeY)-float64(v.cameraY))
+
+			// draw a yellow rectangle in the beer, depending on the amount of beer
+			ebitenvector.DrawFilledRect(SimulationImage, float32(v.sim.Environment.Agents[i].X+1.3)*sizeX-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y+2)*sizeY-float32(v.cameraY), sizeX*0.8, -float32(v.sim.Environment.Agents[i].DrinkContents)/330*sizeY, colornames.Yellow, false)
+			// draw a white rectangle on top of the beer
+			ebitenvector.DrawFilledRect(SimulationImage, float32(v.sim.Environment.Agents[i].X+1.3)*sizeX-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y+2)*sizeY-float32(v.cameraY)-float32(v.sim.Environment.Agents[i].DrinkContents)/330*sizeY*0.99, sizeX*0.8, -0.15*sizeY, colornames.White, true)
+			SimulationImage.DrawImage(EmptyBeerImg, opts)
+			//switch {
+			//case v.sim.Environment.Agents[i].DrinkContents <= 1:
+			//	SimulationImage.DrawImage(EmptyBeerImg, opts)
+			//case v.sim.Environment.Agents[i].DrinkContents > 1 && v.sim.Environment.Agents[i].DrinkContents < 66:
+			//	SimulationImage.DrawImage(OneOfFiveBeerImg, opts)
+			//case v.sim.Environment.Agents[i].DrinkContents >= 66 && v.sim.Environment.Agents[i].DrinkContents < 132:
+			//	SimulationImage.DrawImage(TwoOfFiveBeerImg, opts)
+			//case v.sim.Environment.Agents[i].DrinkContents >= 132 && v.sim.Environment.Agents[i].DrinkContents < 198:
+			//	SimulationImage.DrawImage(ThreeOfFiveBeerImg, opts)
+			//case v.sim.Environment.Agents[i].DrinkContents >= 198 && v.sim.Environment.Agents[i].DrinkContents < 264:
+			//	SimulationImage.DrawImage(FourOfFiveBeerImg, opts)
+			//case v.sim.Environment.Agents[i].DrinkContents >= 264:
+			//	SimulationImage.DrawImage(FullBeerImg, opts)
+			//}
 		}
 		// ebitenvector.DrawFilledCircle(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), sizeX/2, color, false)
 
@@ -460,7 +470,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 		}
 
 		// draw line between agent and walls that affect it
-		if v.showWallInteractions || i == shownAgent {
+		if v.showWallInteractions {
 			for _, mur := range v.sim.Environment.MapSparse.Walls {
 				normeEucli := math.Sqrt((float64(mur[0])-v.sim.Environment.Agents[i].X)*(float64(mur[0])-v.sim.Environment.Agents[i].X) + (float64(mur[1])-v.sim.Environment.Agents[i].Y)*(float64(mur[1])-v.sim.Environment.Agents[i].Y))
 				if normeEucli < 5 {
@@ -472,7 +482,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 		}
 
 		// draw line between agent and agent that affect it
-		if v.showAgentInteractions || i == shownAgent {
+		if v.showAgentInteractions {
 			for _, otherAgent := range v.sim.Environment.Agents {
 				normeEucli := math.Sqrt((otherAgent.X-v.sim.Environment.Agents[i].X)*(otherAgent.X-v.sim.Environment.Agents[i].X) + (otherAgent.Y-v.sim.Environment.Agents[i].Y)*(otherAgent.Y-v.sim.Environment.Agents[i].Y))
 				if normeEucli < 5 {
@@ -498,7 +508,7 @@ func (v *View) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	FullBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/BeerFull.png")
-	EmptyBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/BeerEmpty.png")
+	EmptyBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/beerGlass.png")
 	OneOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer1Of5.png")
 	TwoOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer2Of5.png")
 	ThreeOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer3Of5.png")
