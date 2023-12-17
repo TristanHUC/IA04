@@ -15,12 +15,8 @@ func (m *Map) IsWall(x, y int) bool {
 	return false
 }
 
-// LoadFromFile loads a map from a file.
-func (m *Map) LoadFromFile(filename string) error {
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		return err
-	}
+// LoadFromString loads a map from a string.
+func (m *Map) LoadFromString(content string) error {
 	m.Height = 0
 	// mesure width on first line
 	m.Width = 0
@@ -68,6 +64,15 @@ func (m *Map) LoadFromFile(filename string) error {
 		log.Fatalf("invalid map: %dx%d", m.Width, m.Height)
 	}
 	return nil
+}
+
+// LoadFromFile loads a map from a file.
+func (m *Map) LoadFromFile(filename string) error {
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	return m.LoadFromString(string(content))
 }
 
 // SaveToFile saves a map to a file.
