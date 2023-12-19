@@ -54,6 +54,7 @@ type Agent struct {
 	PerceptExitChannel                      chan Action
 	PerceptPeeChannel                       chan bool
 	BeerChannel                             chan bool
+	BeerCounterChan                         chan bool
 	picMapDense                             [][]uint8
 	picMapSparse                            *_map.Map
 	rollingMeanMovement                     float64
@@ -81,7 +82,7 @@ type PerceptRequest struct {
 	ResponseChannel chan []*Agent
 }
 
-func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool) *Agent {
+func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool, BeerChanCounter chan bool) *Agent {
 	agent := &Agent{
 		ID:                 ID,
 		Speed:              float64(rand.Intn(1)+1) / 30,

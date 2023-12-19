@@ -8,6 +8,7 @@ type Simulation struct {
 }
 
 func (s *Simulation) Start() {
+	go s.Environment.Counter.Run()
 	for i := 0; i < s.NAgents; i++ {
 		go s.Environment.Agents[i].Run()
 	}

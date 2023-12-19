@@ -43,20 +43,23 @@ func (ClientBehavior) CoordinatesGenerator(m _map.Map, isLaterGenerated bool) (f
 		x = int(minWallX) + rand.Intn(int(maxWallX-minWallX))
 		y = int(minWallY) + rand.Intn(int(maxWallY-minWallY))
 		coordsOk := false
-		// while agent is inside a wall, generate new coordinates
+		// while agent is inside a wall or other things, generate new coordinates
 		for !coordsOk {
+			x = int(minWallX) + rand.Intn(int(maxWallX-minWallX))
+			y = int(minWallY) + rand.Intn(int(maxWallY-minWallY))
 			coordsOk = true
 			for _, wall := range m.Walls {
 				if wall[0] == x && wall[1] == y {
-					x = int(minWallX) + rand.Intn(int(maxWallX-minWallX))
-					y = int(minWallY) + rand.Intn(int(maxWallY-minWallY))
 					coordsOk = false
 				}
 			}
 			for _, counter := range m.BarmenArea {
 				if counter[0] == x && counter[1] == y {
-					x = int(minWallX) + rand.Intn(int(maxWallX-minWallX))
-					y = int(minWallY) + rand.Intn(int(maxWallY-minWallY))
+					coordsOk = false
+				}
+			}
+			for _, beerTap := range m.BeerTaps {
+				if beerTap[0] == x && beerTap[1] == y {
 					coordsOk = false
 				}
 			}
