@@ -33,14 +33,14 @@ func (BarmanBehavior) Act(a *Agent) {
 	}
 
 	// if agent want to go to client, and the client is not waiting for a barman, change the Action to WaitForClient
-	if a.Action == GoToClient && a.client.Action != WaitForBeer {
+	if a.Action == GoToClient && a.client != nil && a.client.Action != WaitForBeer {
 		fmt.Println("Client is not waiting for a barman")
 		a.Action = WaitForClient
 		a.client = nil
 	}
 
 	// if agent want to go to client, and current goal is not the closest barmen area to the client, change goal
-	if a.Action == GoToClient && (a.Goal == nil || distanceNode(*a.Goal, a.GetClosestBarmenArea(*a.client)) > 1.5) {
+	if a.Action == GoToClient && a.client != nil && (a.Goal == nil || distanceNode(*a.Goal, a.GetClosestBarmenArea(*a.client)) > 1.5) {
 		g := a.GetClosestBarmenArea(*a.client)
 		a.Goal = &g
 	}

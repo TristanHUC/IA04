@@ -108,6 +108,7 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		hasABarman:         false,
 		endOfLife:          false,
 		Behavior:           behavior,
+		BeerCounterChan:    BeerChanCounter,
 		Name:               faker.FirstName() + " " + faker.LastName(),
 		justPie:            false,
 	}
@@ -145,7 +146,7 @@ func (a *Agent) Run() {
 			time.Sleep(1 * time.Millisecond)
 			continue
 		}
-		if a.lastExecutionTime.Add(17 * time.Millisecond).Before(time.Now()) {
+		if true {
 			a.Percept()
 			a.lastExecutionTime = time.Now()
 

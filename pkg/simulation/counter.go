@@ -1,25 +1,20 @@
 package simulation
 
-import "fmt"
-
 type Counter struct {
 	BeerCounterChan chan bool
 	Counter         int
+	running         bool
 }
 
 func (c *Counter) Run() {
-	fmt.Println("Counter started")
-	for {
-		fmt.Println("Counter waiting")
+	c.running = true
+	for c.running {
 		_ = <-c.BeerCounterChan
 		c.Counter++
-		if c.Counter%10 == 0 {
-			println(c.Counter)
-		}
 	}
 }
 
-func (c *Counter) GetCounter() int {
+func (c *Counter) GetCount() int {
 	return c.Counter
 }
 
