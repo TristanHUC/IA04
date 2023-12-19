@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"github.com/ankurjha7/jps"
 	"math"
 	"math/rand"
 )
@@ -61,4 +62,8 @@ func VectToAngle(x, y float64) float64 {
 
 func distanceInt(x1, y1, x2, y2 int) float64 {
 	return math.Sqrt(math.Pow(float64(x1-x2), 2) + math.Pow(float64(y1-y2), 2))
+}
+
+func distanceNode(n1, n2 jps.Node) float64 {
+	return math.Sqrt(math.Pow(float64(n1.GetCol()-n2.GetCol()), 2) + math.Pow(float64(n1.GetRow()-n2.GetRow()), 2))
 }
