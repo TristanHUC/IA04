@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ankurjha7/jps"
+	"github.com/go-faker/faker/v4"
 	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
 	"math"
 	"math/rand"
@@ -69,6 +70,7 @@ type Agent struct {
 	hasABarman                              bool
 	endOfLife                               bool
 	Paused                                  bool
+	Name                                    string
 }
 
 type PerceptRequest struct {
@@ -101,6 +103,7 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		hasABarman:         false,
 		endOfLife:          false,
 		Behavior:           behavior,
+		Name:               faker.FirstName() + " " + faker.LastName(),
 	}
 	agent.X, agent.Y = agent.Behavior.CoordinatesGenerator(*picMapSparse, isLaterGenerated)
 	return agent

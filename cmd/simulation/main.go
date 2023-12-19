@@ -40,6 +40,7 @@ const (
 type View struct {
 	sim                   *simulation.Simulation
 	showPaths             bool
+	showNames             bool
 	showWallInteractions  bool
 	showAgentInteractions bool
 	cameraX, cameraY      int
@@ -137,6 +138,9 @@ func (v *View) Update() error {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
 		v.showPaths = !v.showPaths
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyE) {
+		v.showNames = !v.showNames
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
@@ -454,6 +458,21 @@ func (v *View) Draw(screen *ebiten.Image) {
 				optsImage,
 			)
 
+			textToWrite = v.sim.Environment.Agents[i].Name
+			text.Draw(
+				SimulationImage,
+				textToWrite,
+				mplusNormalFont,
+				int((v.sim.Environment.Agents[i].X+1)*float64(sizeX)-float64(v.cameraX)-30),
+				int((v.sim.Environment.Agents[i].Y+1)*float64(sizeY)-float64(v.cameraY)-5),
+				color.RGBA{
+					R: 255,
+					G: 255,
+					B: 255,
+					A: 255,
+				},
+			)
+
 			//color = colornames.Red
 			textarea.SetText(fmt.Sprintf("Drink content : %.2f \n Bladder content :%.2f \n Number of agents wanted :%d \n Number of agent currently :%d \n action : %s", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents, nAgentsWished, v.sim.NAgents, ActionToName[v.sim.Environment.Agents[i].Action]))
 			opts := &ebiten.DrawImageOptions{}
@@ -500,6 +519,24 @@ func (v *View) Draw(screen *ebiten.Image) {
 			//case v.sim.Environment.Agents[i].DrinkContents >= 264:
 			//	SimulationImage.DrawImage(FullBeerImg, opts)
 			//}
+		} else {
+			if v.showNames {
+				textToWrite = v.sim.Environment.Agents[i].Name
+				text.Draw(
+					SimulationImage,
+					textToWrite,
+					mplusNormalFont,
+					int((v.sim.Environment.Agents[i].X)*float64(sizeX)-float64(v.cameraX)-25),
+					int((v.sim.Environment.Agents[i].Y)*float64(sizeY)-float64(v.cameraY)-5),
+					color.RGBA{
+						R: 0,
+						G: 0,
+						B: 0,
+						A: 100,
+					},
+				)
+			}
+
 		}
 		// ebitenvector.DrawFilledCircle(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), sizeX/2, color, false)
 
@@ -698,6 +735,7 @@ func main() {
 	fmt.Println(" - W: toggle showing wall interactions")
 	fmt.Println(" - A: toggle showing agent interactions")
 	fmt.Println(" - P: toggle showing paths")
+	fmt.Println(" - E: toggle agents' name")
 
 	// Call ebiten.RunGame to start your game loop.
 	if err := ebiten.RunGame(&view); err != nil {
