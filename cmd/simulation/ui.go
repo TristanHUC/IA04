@@ -12,13 +12,38 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 
 	// Create the rootContainer with the NineSlice image as the background
 	rootContainer = widget.NewContainer(
-		widget.ContainerOpts.BackgroundImage(image.NewNineSliceColor(color.NRGBA{0x13, 0x1a, 0x22, 0xff})), // Set NineSlice image as the background
-
 		// the container will use an anchor layout to layout its single child widget
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
 			widget.RowLayoutOpts.Direction(widget.DirectionHorizontal),
 		)),
 	)
+
+	// layout for widget
+	layoutWidget = widget.NewContainer(
+		widget.ContainerOpts.BackgroundImage(image.NewNineSliceColor(color.NRGBA{157, 157, 157, 230})), // Set NineSlice image as the background
+		// the container will use an anchor layout to layout its single child widget
+		widget.ContainerOpts.Layout(widget.NewRowLayout(
+			widget.RowLayoutOpts.Direction(widget.DirectionVertical),
+		)),
+	)
+	// layout for image
+	layoutImage = widget.NewContainer(
+		// the container will use an anchor layout to layout its single child widget
+		widget.ContainerOpts.Layout(widget.NewRowLayout(
+			widget.RowLayoutOpts.Direction(widget.DirectionHorizontal),
+			widget.RowLayoutOpts.Padding(widget.NewInsetsSimple(10)),
+			widget.RowLayoutOpts.Spacing(10),
+		)),
+	)
+
+	// container to display beer image
+	ImageBeer = widget.NewContainer()
+
+	// container to display beer bladder
+	ImageBladder = widget.NewContainer()
+
+	// container to display beer character
+	ImageCharacter = widget.NewContainer()
 
 	ui := ebitenui.UI{
 		Container: rootContainer,
@@ -32,11 +57,11 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 				// including a max height to ensure the scroll bar is visible
 				widget.WidgetOpts.LayoutData(widget.RowLayoutData{
 					Position:  widget.RowLayoutPositionStart,
-					MaxWidth:  150,
-					MaxHeight: 150,
+					MaxWidth:  180,
+					MaxHeight: 65,
 				}),
 				// Set the minimum size for the widget
-				widget.WidgetOpts.MinSize(150, 150),
+				widget.WidgetOpts.MinSize(180, 65),
 			),
 		),
 		//Set the font color
@@ -44,8 +69,6 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 		//Set the font face (size) to use
 		widget.TextAreaOpts.FontFace(mplusNormalFont),
 		widget.TextAreaOpts.Text("Beer level : 0\n piss level : 0"),
-		//Tell the TextArea to show the vertical scrollbar
-		widget.TextAreaOpts.ShowVerticalScrollbar(),
 		//Set padding between edge of the widget and where the text is drawn
 		widget.TextAreaOpts.TextPadding(widget.NewInsetsSimple(5)),
 		//This sets the background images for the scroll container
@@ -55,23 +78,38 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 				Mask: image.NewNineSliceColor(color.NRGBA{100, 100, 100, 230}),
 			}),
 		),
-		//This sets the images to use for the sliders
-		widget.TextAreaOpts.SliderOpts(
-			widget.SliderOpts.Images(
-				// Set the track images
-				&widget.SliderTrackImage{
-					Idle:  image.NewNineSliceColor(color.NRGBA{100, 100, 100, 230}),
-					Hover: image.NewNineSliceColor(color.NRGBA{200, 200, 200, 230}),
-				},
-				// Set the handle images
-				&widget.ButtonImage{
-					Idle:    image.NewNineSliceColor(color.NRGBA{190, 190, 190, 200}),
-					Hover:   image.NewNineSliceColor(color.NRGBA{140, 140, 140, 200}),
-					Pressed: image.NewNineSliceColor(color.NRGBA{140, 140, 140, 200}),
-				},
+	)
+
+	textarea = widget.NewTextArea(
+		widget.TextAreaOpts.ContainerOpts(
+			widget.ContainerOpts.WidgetOpts(
+				// Set the layout data for the textarea
+				// including a max height to ensure the scroll bar is visible
+				widget.WidgetOpts.LayoutData(widget.RowLayoutData{
+					Position:  widget.RowLayoutPositionStart,
+					MaxWidth:  180,
+					MaxHeight: 80,
+				}),
+				// Set the minimum size for the widget
+				widget.WidgetOpts.MinSize(180, 80),
 			),
 		),
+		//Set the font color
+		widget.TextAreaOpts.FontColor(color.RGBA{R: 255, G: 255, B: 255, A: 255}),
+		//Set the font face (size) to use
+		widget.TextAreaOpts.FontFace(mplusNormalFont),
+		widget.TextAreaOpts.Text("Beer level : 0\n piss level : 0"),
+		//Set padding between edge of the widget and where the text is drawn
+		widget.TextAreaOpts.TextPadding(widget.NewInsetsSimple(5)),
+		//This sets the background images for the scroll container
+		widget.TextAreaOpts.ScrollContainerOpts(
+			widget.ScrollContainerOpts.Image(&widget.ScrollContainerImage{
+				Idle: image.NewNineSliceColor(color.NRGBA{157, 157, 157, 230}),
+				Mask: image.NewNineSliceColor(color.NRGBA{100, 100, 100, 230}),
+			}),
+		),
 	)
+
 	buttonImage := simulation.LoadButtonImage()
 	openButton = widget.NewButton(
 		widget.ButtonOpts.Image(buttonImage),
@@ -81,11 +119,22 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
 			isOpen = !isOpen
 			if isOpen {
-				rootContainer.AddChild(textarea)
+				rootContainer.AddChild(layoutWidget)
 				rootContainer.AddChild(slider)
+				layoutWidget.AddChild(textarea)
+				layoutWidget.AddChild(layoutImage)
+				layoutImage.AddChild(ImageBeer)
+				layoutImage.AddChild(ImageCharacter)
+				layoutImage.AddChild(ImageBladder)
 			} else {
-				rootContainer.RemoveChild(textarea)
+				rootContainer.RemoveChild(layoutWidget)
 				rootContainer.RemoveChild(slider)
+				layoutWidget.RemoveChild(textarea)
+				layoutWidget.RemoveChild(layoutImage)
+				layoutImage.RemoveChild(ImageBeer)
+				layoutImage.RemoveChild(ImageCharacter)
+				layoutImage.RemoveChild(ImageBladder)
+
 			}
 		}),
 		widget.ButtonOpts.WidgetOpts(
@@ -131,15 +180,20 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 		// Set the callback to call when the slider value is changed
 		widget.SliderOpts.ChangedHandler(func(args *widget.SliderChangedEventArgs) {
 			nAgentsWished = 610 - args.Current
-			pastSliderValue = float64(args.Current)
 		}),
 	)
 	// Set the current value of the slider
 	slider.Current = 610 - nAgents
 
 	rootContainer.AddChild(openButton)
-	rootContainer.AddChild(textarea)
+	rootContainer.AddChild(layoutWidget)
 	rootContainer.AddChild(slider)
+
+	layoutWidget.AddChild(textarea)
+	layoutWidget.AddChild(layoutImage)
+	layoutImage.AddChild(ImageBeer)
+	layoutImage.AddChild(ImageCharacter)
+	layoutImage.AddChild(ImageBladder)
 
 	return ui
 }

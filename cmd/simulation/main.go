@@ -57,6 +57,11 @@ var (
 	agentLastDirections []int
 	mplusNormalFont     font.Face
 	rootContainer       *widget.Container
+	layoutImage         *widget.Container
+	layoutWidget        *widget.Container
+	ImageBeer           *widget.Container
+	ImageBladder        *widget.Container
+	ImageCharacter      *widget.Container
 	textarea            *widget.TextArea
 	openButton          *widget.Button
 	slider              *widget.Slider
@@ -67,6 +72,9 @@ var (
 	TwoOfFiveBeerImg    *ebiten.Image
 	ThreeOfFiveBeerImg  *ebiten.Image
 	FourOfFiveBeerImg   *ebiten.Image
+	LogoWC              *ebiten.Image
+
+	alternate int
 
 	WomanToiletTexture *ebiten.Image
 
@@ -93,8 +101,11 @@ var (
 
 	testMapDense    [][]uint8
 	SimulationImage *ebiten.Image
+	BeerImage       *ebiten.Image
+	BladderImage    *ebiten.Image
+	CharacterImage  *ebiten.Image
 
-	pastSliderValue float64
+	ActionToName map[simulation.Action]string
 
 	nAgentsWished         int
 	lastAgentCreationTime time.Time
@@ -105,7 +116,7 @@ func (v *View) Update() error {
 	if v.CurrentMode == ModeMove {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			x, y := ebiten.CursorPosition()
-			if ((y <= 0) || (y >= 100)) && ((x <= 140) || (x >= 179)) {
+			if ((y <= -10) || (y >= 150)) && ((x <= 130) || (x >= 189)) {
 				if v.draggingPos == [2]int{-1, -1} {
 					v.draggingPos = [2]int{x, y}
 					v.draggingCameraPos = [2]int{int(v.cameraX), int(v.cameraY)}
@@ -218,6 +229,10 @@ func (v *View) Update() error {
 func (v *View) Draw(screen *ebiten.Image) {
 	// fill background #404059
 	SimulationImage.Fill(color.RGBA{R: 40, G: 40, B: 59, A: 255})
+
+	CharacterImage.Fill(color.NRGBA{157, 157, 157, 230})
+	BladderImage.Fill(color.NRGBA{157, 157, 157, 230})
+	BeerImage.Fill(color.NRGBA{157, 157, 157, 230})
 
 	// write camera pos in top left corner
 	textToWrite := fmt.Sprintf("(%d, %d)", int(v.cameraX), int(v.cameraY))
@@ -397,6 +412,9 @@ func (v *View) Draw(screen *ebiten.Image) {
 		ebitenvector.DrawFilledCircle(SimulationImage, float32(Enter[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Enter[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 100, G: 220, B: 220, A: 255}, false)
 	}
 
+	optsImage := &ebiten.DrawImageOptions{}
+	optsImage.GeoM.Scale(10, 10)
+
 	// draw agents, their position and their goals
 	for i := 0; i < v.sim.NAgents; i++ {
 		// draw agent
@@ -430,8 +448,14 @@ func (v *View) Draw(screen *ebiten.Image) {
 		)
 
 		if i == shownAgent {
+
+			CharacterImage.DrawImage(
+				animationImage,
+				optsImage,
+			)
+
 			//color = colornames.Red
-			textarea.SetText(fmt.Sprintf("verre actuel : %.2f \n\n vessie :%.2f \n\n nombre d'agent voulu:%d \n\n nombre d'agent actuel:%d", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents, nAgentsWished, v.sim.NAgents))
+			textarea.SetText(fmt.Sprintf("Drink content : %.2f \n Bladder content :%.2f \n Number of agents wanted :%d \n Number of agent currently :%d \n action : %s", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents, nAgentsWished, v.sim.NAgents, ActionToName[v.sim.Environment.Agents[i].Action]))
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Scale(float64(v.cameraZoom), float64(v.cameraZoom))
 			opts.GeoM.Translate((v.sim.Environment.Agents[i].X+1)*float64(sizeX)-float64(v.cameraX), (v.sim.Environment.Agents[i].Y+1)*float64(sizeY)-float64(v.cameraY))
@@ -441,6 +465,27 @@ func (v *View) Draw(screen *ebiten.Image) {
 			// draw a white rectangle on top of the beer
 			ebitenvector.DrawFilledRect(SimulationImage, float32(v.sim.Environment.Agents[i].X+1.3)*sizeX-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y+2)*sizeY-float32(v.cameraY)-float32(v.sim.Environment.Agents[i].DrinkContents)/330*sizeY*0.99, sizeX*0.8, -0.15*sizeY, colornames.White, true)
 			SimulationImage.DrawImage(EmptyBeerImg, opts)
+
+			// draw a white rectangle on top of the beer of widget
+			ebitenvector.DrawFilledRect(BeerImage, float32(30), float32(82)-float32(v.sim.Environment.Agents[i].DrinkContents)/330*82, 50, -9, colornames.White, true)
+
+			// draw a yellow rectangle in the beer of widget, depending on the amount of beer
+			ebitenvector.DrawFilledRect(BeerImage, float32(25), float32(80), 55, -float32(v.sim.Environment.Agents[i].DrinkContents)/330*80, colornames.Yellow, false)
+
+			if v.sim.Environment.Agents[i].Action == simulation.Action(2) {
+				alternate++
+				if alternate == 20 {
+					alternate = 0
+				}
+				if (alternate >= 0) && (alternate < 10) {
+					// draw a yellow rectangle in the bladder widget, when need to go to WC
+					ebitenvector.DrawFilledRect(BladderImage, 0, 0, 100, 100, colornames.Yellow, false)
+
+				}
+			}
+
+			BeerImage.DrawImage(EmptyBeerImg, optsImage)
+			BladderImage.DrawImage(LogoWC, nil)
 			//switch {
 			//case v.sim.Environment.Agents[i].DrinkContents <= 1:
 			//	SimulationImage.DrawImage(EmptyBeerImg, opts)
@@ -494,6 +539,18 @@ func (v *View) Draw(screen *ebiten.Image) {
 		}
 	}
 
+	//image bladder
+	nineSliceCharacterImage := image.NewNineSlice(CharacterImage, [3]int{0, CharacterImage.Bounds().Dx(), 0}, [3]int{0, CharacterImage.Bounds().Dy(), 0})
+	ImageCharacter.BackgroundImage = nineSliceCharacterImage
+
+	//image bladder
+	nineSliceBladderImage := image.NewNineSlice(BladderImage, [3]int{0, BladderImage.Bounds().Dx(), 0}, [3]int{0, BladderImage.Bounds().Dy(), 0})
+	ImageBladder.BackgroundImage = nineSliceBladderImage
+
+	//image beer
+	nineSliceBeerImage := image.NewNineSlice(BeerImage, [3]int{0, BeerImage.Bounds().Dx(), 0}, [3]int{0, BeerImage.Bounds().Dy(), 0})
+	ImageBeer.BackgroundImage = nineSliceBeerImage
+
 	//add the simulation in the background
 	nineSliceImage := image.NewNineSlice(SimulationImage, [3]int{0, SimulationImage.Bounds().Dx(), 0}, [3]int{0, SimulationImage.Bounds().Dy(), 0})
 	rootContainer.BackgroundImage = nineSliceImage
@@ -507,6 +564,7 @@ func (v *View) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func init() {
+	LogoWC, _, _ = ebitenutil.NewImageFromFile("assets/toiletteLogo.png")
 	FullBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/BeerFull.png")
 	EmptyBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/beerGlass.png")
 	OneOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer1Of5.png")
@@ -546,6 +604,21 @@ func main() {
 
 	SimulationImage = ebiten.NewImage(ScreenWidth, ScreenHeight)
 
+	CharacterImage = ebiten.NewImage(200, 200)
+	BladderImage = ebiten.NewImage(100, 100)
+	BeerImage = ebiten.NewImage(100, 100)
+
+	ActionToName = make(map[simulation.Action]string)
+	ActionToName[simulation.Action(0)] = "none"
+	ActionToName[simulation.Action(1)] = "GoToRandomSpot"
+	ActionToName[simulation.Action(2)] = "GoToToilet"
+	ActionToName[simulation.Action(3)] = "GoToBar"
+	ActionToName[simulation.Action(4)] = "GoToBeerTap"
+	ActionToName[simulation.Action(5)] = "WaitForBeer"
+	ActionToName[simulation.Action(6)] = "WaitForClient"
+	ActionToName[simulation.Action(7)] = "GoToClient"
+	ActionToName[simulation.Action(8)] = "GoToExit"
+
 	nAgentsMax = 1000
 	// load font
 	tt, err := opentype.Parse(fonts.MPlus1pRegular_ttf)
@@ -581,8 +654,6 @@ func main() {
 	nAgents := 100
 	nAgentsWished = nAgents
 	nBarmans := 10
-
-	pastSliderValue = float64(nAgents)
 
 	// initialize animation steps
 	agentAnimationSteps = make([]float64, nAgentsMax)
