@@ -52,6 +52,7 @@ type Agent struct {
 	channelAgent                            chan []*Agent
 	perceptChannel                          chan PerceptRequest
 	PerceptExitChannel                      chan Action
+	PerceptPeeChannel                       chan bool
 	BeerChannel                             chan bool
 	picMapDense                             [][]uint8
 	picMapSparse                            *_map.Map
@@ -71,6 +72,8 @@ type Agent struct {
 	endOfLife                               bool
 	Paused                                  bool
 	Name                                    string
+	justPie                                 bool
+	woman                                   bool
 }
 
 type PerceptRequest struct {
@@ -88,6 +91,7 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		BeerChannel:        make(chan bool, 1),
 		perceptChannel:     perceptChannel,
 		PerceptExitChannel: make(chan Action, 1),
+		PerceptPeeChannel:  make(chan bool, 1),
 		picMapDense:        picMapDense,
 		picMapSparse:       picMapSparse,
 		lastExecutionTime:  time.Now(),
@@ -104,6 +108,10 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		endOfLife:          false,
 		Behavior:           behavior,
 		Name:               faker.FirstName() + " " + faker.LastName(),
+		justPie:            false,
+	}
+	if rand.Intn(2) == 1 {
+		agent.woman = true
 	}
 	agent.X, agent.Y = agent.Behavior.CoordinatesGenerator(*picMapSparse, isLaterGenerated)
 	return agent
@@ -118,9 +126,19 @@ func (a *Agent) PerceptOrderExit() {
 	a.Action = <-a.PerceptExitChannel
 }
 
+func (a *Agent) PerceptEndOfPieEnhanced() {
+	a.justPie = <-a.PerceptPeeChannel
+	if a.justPie == true {
+		time.Sleep(6 * time.Second)
+		a.justPie = false
+	}
+	go a.PerceptEndOfPieEnhanced()
+}
+
 func (a *Agent) Run() {
 	pathNotCalculatedYet := true
 	go a.PerceptOrderExit()
+	go a.PerceptEndOfPieEnhanced()
 	for !a.endOfLife {
 		if a.Paused {
 			time.Sleep(1 * time.Millisecond)
@@ -166,6 +184,9 @@ func (a *Agent) Run() {
 			agentStrengthMultiplier := 1.
 			if a.Action == WaitForBeer {
 				agentStrengthMultiplier = 20
+			}
+			if a.justPie == true {
+				agentStrengthMultiplier = 2
 			}
 			err := a.calculatePosition(wallInteractionDistanceMultiplier, 1, agentStrengthMultiplier)
 			if err != nil {

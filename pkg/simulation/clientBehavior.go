@@ -74,10 +74,11 @@ func (ClientBehavior) Reflect(a *Agent) {
 	if a.BladderContents > 450 {
 		// go to toilet
 		a.Action = GoToToilet
-	}
-	if !a.drinkEmptyTime.IsZero() && a.drinkEmptyTime.Add(a.timeBetweenDrinks).Before(a.lastExecutionTime) {
-		// go to bar
-		a.Action = GoToBar
+	} else {
+		if !a.drinkEmptyTime.IsZero() && a.drinkEmptyTime.Add(a.timeBetweenDrinks).Before(a.lastExecutionTime) {
+			// go to bar
+			a.Action = GoToBar
+		}
 	}
 }
 
@@ -92,10 +93,16 @@ func (ClientBehavior) Act(a *Agent) {
 	}
 
 	// if agent want to go to toilet, and current goal does not reflect that, change goal
-	if a.Action == GoToToilet && (a.Goal == nil || !slices.Contains(a.picMapSparse.ManToiletPoints, [2]int{int(a.Goal.GetCol()), int(a.Goal.GetRow())})) {
-		toilet := a.picMapSparse.ManToiletPoints[rand.Intn(len(a.picMapSparse.ManToiletPoints))]
-		g := jps.GetNode(toilet[1], toilet[0])
-		a.Goal = &g
+	if a.Action == GoToToilet && (a.Goal == nil || !(slices.Contains(a.picMapSparse.ManToiletPoints, [2]int{int(a.Goal.GetCol()), int(a.Goal.GetRow())}) || slices.Contains(a.picMapSparse.WomanToiletPoints, [2]int{int(a.Goal.GetCol()), int(a.Goal.GetRow())}))) {
+		if a.woman == true {
+			toilet := a.picMapSparse.WomanToiletPoints[rand.Intn(len(a.picMapSparse.WomanToiletPoints))]
+			g := jps.GetNode(toilet[1], toilet[0])
+			a.Goal = &g
+		} else {
+			toilet := a.picMapSparse.ManToiletPoints[rand.Intn(len(a.picMapSparse.ManToiletPoints))]
+			g := jps.GetNode(toilet[1], toilet[0])
+			a.Goal = &g
+		}
 	}
 
 	// if agent want to go to bar, and current goal does not reflect that, change goal
@@ -146,6 +153,7 @@ func (ClientBehavior) Act(a *Agent) {
 		} else if a.Action == GoToToilet {
 			a.BladderContents = 0
 			a.Action = GoToRandomSpot
+			a.PerceptPeeChannel <- true
 		} else if a.Action == GoToBar {
 			a.Action = WaitForBeer
 			go a.WaitForBeer()
