@@ -87,5 +87,5 @@ func (a *Agent) SearchForClient() {
 func (a *Agent) GiveABeer() {
 	a.client.BeerChannel <- true
 	a.DrinkContents = 0
-	a.BeerCounterChan <- true
+	a.BeerCounterChan <- a.NbLoops
 }
