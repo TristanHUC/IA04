@@ -52,28 +52,26 @@ type View struct {
 }
 
 var (
-	shownAgent          int
-	agentAnimations     [7][8][3]*ebiten.Image // character models * n°directions * animation steps
-	agentAnimationSteps []float64
-	agentLastDirections []int
-	mplusNormalFont     font.Face
-	rootContainer       *widget.Container
-	layoutImage         *widget.Container
-	layoutWidget        *widget.Container
-	ImageBeer           *widget.Container
-	ImageBladder        *widget.Container
-	ImageCharacter      *widget.Container
-	textarea            *widget.TextArea
-	openButton          *widget.Button
-	slider              *widget.Slider
-	isOpen              bool = true
-	FullBeerImg         *ebiten.Image
-	EmptyBeerImg        *ebiten.Image
-	OneOfFiveBeerImg    *ebiten.Image
-	TwoOfFiveBeerImg    *ebiten.Image
-	ThreeOfFiveBeerImg  *ebiten.Image
-	FourOfFiveBeerImg   *ebiten.Image
-	LogoWC              *ebiten.Image
+	shownAgent           *simulation.Agent
+	agentAnimations      [7][8][3]*ebiten.Image // character models * n°directions * animation steps
+	agentAnimationSteps  []float64
+	agentLastDirections  []int
+	mplusNormalFont      font.Face
+	agentNameFont        font.Face
+	rootContainer        *widget.Container
+	simulationInfoWidget *widget.Container
+	agentInfoImages      *widget.Container
+	agentNameWidget      *widget.Label
+	agentInfoWidget      *widget.Container
+	ImageBeer            *widget.Container
+	ImageBladder         *widget.Container
+	ImageCharacter       *widget.Container
+	textarea             *widget.TextArea
+	openButton           *widget.Button
+	slider               *widget.Slider
+	isOpen               bool = true
+	EmptyBeerImg         *ebiten.Image
+	LogoWC               *ebiten.Image
 
 	alternate int
 
@@ -148,16 +146,16 @@ func (v *View) Update() error {
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-		v.sim.Environment.Agents[shownAgent].Vy = -v.sim.Environment.Agents[shownAgent].Speed
+		shownAgent.Vy = -shownAgent.Speed
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-		v.sim.Environment.Agents[shownAgent].Vy = v.sim.Environment.Agents[shownAgent].Speed
+		shownAgent.Vy = shownAgent.Speed
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		v.sim.Environment.Agents[shownAgent].Vx = -v.sim.Environment.Agents[shownAgent].Speed
+		shownAgent.Vx = -shownAgent.Speed
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		v.sim.Environment.Agents[shownAgent].Vx = v.sim.Environment.Agents[shownAgent].Speed
+		shownAgent.Vx = shownAgent.Speed
 	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
@@ -168,15 +166,15 @@ func (v *View) Update() error {
 		mapPosY := (float64(y) + float64(v.cameraY)) / (sizeY * v.cameraZoom)
 		// find closest agent
 		minDist := math.Inf(1)
-		closestAgent := -1
-		for i, agent := range v.sim.Environment.Agents {
+		var closestAgent *simulation.Agent
+		for _, agent := range v.sim.Environment.Agents {
 			dist := math.Sqrt((agent.X-float64(mapPosX))*(agent.X-float64(mapPosX)) + (agent.Y-float64(mapPosY))*(agent.Y-float64(mapPosY)))
 			if dist < minDist {
 				minDist = dist
-				closestAgent = i
+				closestAgent = agent
 			}
 		}
-		if closestAgent != -1 && minDist < 2 {
+		if closestAgent != nil && minDist < 2 {
 			shownAgent = closestAgent
 		}
 	}
@@ -451,7 +449,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 			opts,
 		)
 
-		if i == shownAgent {
+		if v.sim.Environment.Agents[i].ID == shownAgent.ID {
 
 			CharacterImage.DrawImage(
 				animationImage,
@@ -474,7 +472,8 @@ func (v *View) Draw(screen *ebiten.Image) {
 			)
 
 			//color = colornames.Red
-			textarea.SetText(fmt.Sprintf("Drink content : %.2f \n Bladder content :%.2f \n Number of agents wanted :%d \n Number of agent currently :%d \n action : %s", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents, nAgentsWished, v.sim.NAgents, ActionToName[v.sim.Environment.Agents[i].Action]))
+			//textarea.SetText(fmt.Sprintf("Number of agents wanted :%d \n Number of agent currently :%d \n action : %s", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents, nAgentsWished, v.sim.NAgents, ActionToName[v.sim.Environment.Agents[i].Action]))
+			agentNameWidget.Label = v.sim.Environment.Agents[i].Name
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Scale(float64(v.cameraZoom), float64(v.cameraZoom))
 			opts.GeoM.Translate((v.sim.Environment.Agents[i].X+1)*float64(sizeX)-float64(v.cameraX), (v.sim.Environment.Agents[i].Y+1)*float64(sizeY)-float64(v.cameraY))
@@ -505,20 +504,6 @@ func (v *View) Draw(screen *ebiten.Image) {
 
 			BeerImage.DrawImage(EmptyBeerImg, optsImage)
 			BladderImage.DrawImage(LogoWC, nil)
-			//switch {
-			//case v.sim.Environment.Agents[i].DrinkContents <= 1:
-			//	SimulationImage.DrawImage(EmptyBeerImg, opts)
-			//case v.sim.Environment.Agents[i].DrinkContents > 1 && v.sim.Environment.Agents[i].DrinkContents < 66:
-			//	SimulationImage.DrawImage(OneOfFiveBeerImg, opts)
-			//case v.sim.Environment.Agents[i].DrinkContents >= 66 && v.sim.Environment.Agents[i].DrinkContents < 132:
-			//	SimulationImage.DrawImage(TwoOfFiveBeerImg, opts)
-			//case v.sim.Environment.Agents[i].DrinkContents >= 132 && v.sim.Environment.Agents[i].DrinkContents < 198:
-			//	SimulationImage.DrawImage(ThreeOfFiveBeerImg, opts)
-			//case v.sim.Environment.Agents[i].DrinkContents >= 198 && v.sim.Environment.Agents[i].DrinkContents < 264:
-			//	SimulationImage.DrawImage(FourOfFiveBeerImg, opts)
-			//case v.sim.Environment.Agents[i].DrinkContents >= 264:
-			//	SimulationImage.DrawImage(FullBeerImg, opts)
-			//}
 		} else {
 			if v.showNames {
 				textToWrite = v.sim.Environment.Agents[i].Name
@@ -540,7 +525,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 		}
 		// ebitenvector.DrawFilledCircle(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), sizeX/2, color, false)
 
-		if v.sim.Environment.Agents[i].Path != nil && (v.showPaths || i == shownAgent) {
+		if v.sim.Environment.Agents[i].Path != nil && (v.showPaths || v.sim.Environment.Agents[i].ID == shownAgent.ID) {
 			// draw red circle for goal (99,99)
 			ebitenvector.DrawFilledCircle(SimulationImage, float32(v.sim.Environment.Agents[i].Goal.GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Goal.GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), colornames.Red, false)
 
@@ -602,12 +587,7 @@ func (v *View) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	LogoWC, _, _ = ebitenutil.NewImageFromFile("assets/toiletteLogo.png")
-	FullBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/BeerFull.png")
 	EmptyBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/beerGlass.png")
-	OneOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer1Of5.png")
-	TwoOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer2Of5.png")
-	ThreeOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer3Of5.png")
-	FourOfFiveBeerImg, _, _ = ebitenutil.NewImageFromFile("assets/Beer4Of5.png")
 
 	WomanToiletTexture, _, _ = ebitenutil.NewImageFromFile("assets/WomanToilet.png")
 	BarDispenserTexture, _, _ = ebitenutil.NewImageFromFile("assets/v2dispenser.png")
@@ -670,6 +650,12 @@ func main() {
 		Hinting: font.HintingVertical,
 	})
 
+	agentNameFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
+		Size:    24,
+		DPI:     dpi,
+		Hinting: font.HintingVertical,
+	})
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -714,6 +700,7 @@ func main() {
 	agentLastDirections = make([]int, nAgentsMax)
 
 	env := simulation.NewEnvironment(testmap, testMapDense, nAgents, nBarmans)
+	shownAgent = env.Agents[0]
 	sim := simulation.Simulation{
 		Environment: env,
 		NAgents:     nAgents,
