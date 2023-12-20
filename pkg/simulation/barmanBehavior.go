@@ -40,7 +40,7 @@ func (BarmanBehavior) Act(a *Agent) {
 	}
 
 	// if agent want to go to client, and current goal is not the closest barmen area to the client, change goal
-	if a.Action == GoToClient && a.client != nil && (a.Goal == nil || distanceNode(*a.Goal, a.GetClosestBarmenArea(*a.client)) > 1.5) {
+	if a.Action == GoToClient  && a.client != nil && (a.Goal == nil || distanceNode(*a.Goal, a.GetClosestBarmenArea(*a.client)) > 1.5) {
 		g := a.GetClosestBarmenArea(*a.client)
 		a.Goal = &g
 	}
@@ -87,5 +87,5 @@ func (a *Agent) SearchForClient() {
 func (a *Agent) GiveABeer() {
 	a.client.BeerChannel <- true
 	a.DrinkContents = 0
-	a.BeerCounterChan <- true
+	a.BeerCounterChan <- a.NbLoops
 }

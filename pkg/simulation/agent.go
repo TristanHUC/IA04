@@ -54,7 +54,7 @@ type Agent struct {
 	PerceptExitChannel                      chan Action
 	PerceptPeeChannel                       chan bool
 	BeerChannel                             chan bool
-	BeerCounterChan                         chan bool
+	BeerCounterChan                         chan int
 	picMapDense                             [][]uint8
 	picMapSparse                            *_map.Map
 	rollingMeanMovement                     float64
@@ -72,6 +72,7 @@ type Agent struct {
 	hasABarman                              bool
 	endOfLife                               bool
 	Paused                                  bool
+	NbLoops                                 int
 	Name                                    string
 	justPie                                 bool
 	woman                                   bool
@@ -82,7 +83,7 @@ type PerceptRequest struct {
 	ResponseChannel chan []*Agent
 }
 
-func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool, BeerChanCounter chan bool) *Agent {
+func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool, BeerChanCounter chan int) *Agent {
 	agent := &Agent{
 		ID:                 ID,
 		Speed:              float64(rand.Intn(1)+1) / 30,
@@ -109,6 +110,7 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		endOfLife:          false,
 		Behavior:           behavior,
 		BeerCounterChan:    BeerChanCounter,
+		NbLoops:            0,
 		Name:               faker.FirstName() + " " + faker.LastName(),
 		justPie:            false,
 	}
@@ -147,6 +149,7 @@ func (a *Agent) Run() {
 			continue
 		}
 		if true {
+			a.NbLoops++
 			a.Percept()
 			a.lastExecutionTime = time.Now()
 
