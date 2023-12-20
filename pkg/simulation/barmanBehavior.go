@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"fmt"
 	"github.com/ankurjha7/jps"
 	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
 	"golang.org/x/exp/slices"
@@ -26,15 +27,22 @@ func (BarmanBehavior) Act(a *Agent) {
 		a.Goal = &g
 	}
 
-	// if agent want to go to client, and current goal is not the closest barmen area to the client, change goal
-	if a.Action == GoToClient && (a.Goal == nil || distanceNode(*a.Goal, a.GetClosestBarmenArea(*a.client)) > 1.5) {
-		g := a.GetClosestBarmenArea(*a.client)
-		a.Goal = &g
-	}
-
 	// if agent is waiting for a client, he should find one
 	if a.Action == WaitForClient && a.client == nil {
 		a.SearchForClient()
+	}
+
+	// if agent want to go to client, and the client is not waiting for a barman, change the Action to WaitForClient
+	if a.Action == GoToClient && a.client != nil && a.client.Action != WaitForBeer {
+		fmt.Println("Client is not waiting for a barman")
+		a.Action = WaitForClient
+		a.client = nil
+	}
+
+	// if agent want to go to client, and current goal is not the closest barmen area to the client, change goal
+	if a.Action == GoToClient && a.client != nil && (a.Goal == nil || distanceNode(*a.Goal, a.GetClosestBarmenArea(*a.client)) > 1.5) {
+		g := a.GetClosestBarmenArea(*a.client)
+		a.Goal = &g
 	}
 
 	// if goal is reached
@@ -79,4 +87,5 @@ func (a *Agent) SearchForClient() {
 func (a *Agent) GiveABeer() {
 	a.client.BeerChannel <- true
 	a.DrinkContents = 0
+	a.BeerCounterChan <- true
 }
