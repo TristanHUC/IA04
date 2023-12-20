@@ -158,6 +158,15 @@ func (v *View) Update() error {
 		shownAgent.Vx = shownAgent.Speed
 	}
 
+	if ebiten.IsKeyPressed(ebiten.KeyG) {
+		// slow down simulation
+		v.sim.SetSpeed(v.sim.Environment.Agents[0].SimulationSpeed - 0.1)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyH) {
+		// speed up simulation
+		v.sim.SetSpeed(v.sim.Environment.Agents[0].SimulationSpeed + 0.1)
+	}
+
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
 		sizeX := 8.0
