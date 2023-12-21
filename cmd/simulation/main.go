@@ -157,15 +157,6 @@ func (v *View) Update() error {
 		shownAgent.Vx = shownAgent.Speed
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyG) {
-		// speed up simulation
-		*v.sim.SimulationSpeed -= 0.1
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyH) {
-		// slow down simulation
-		*v.sim.SimulationSpeed += 0.1
-	}
-
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
 		sizeX := 8.0
@@ -728,8 +719,6 @@ func main() {
 	fmt.Println(" - A: toggle showing agent interactions")
 	fmt.Println(" - P: toggle showing paths")
 	fmt.Println(" - E: toggle agents' name")
-	fmt.Println(" - G: speed simulation")
-	fmt.Println(" - H: slow simulation")
 
 	// Call ebiten.RunGame to start your game loop.
 	if err := ebiten.RunGame(&view); err != nil {
