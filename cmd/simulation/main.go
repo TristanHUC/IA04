@@ -65,6 +65,7 @@ var (
 	agentActionLabel     *widget.Label
 	agentInfoWidget      *widget.Container
 	nAgentsText          *widget.Label
+	simSpeedText         *widget.Label
 	nAgentsWishedText    *widget.Label
 	ImageBeer            *widget.Container
 	ImageBladder         *widget.Container
@@ -444,7 +445,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 			// in the spritesheet, the first direction is down and it rotates clockwise
 			sector = (8 - sector) % 8
 			sector = (sector + 6) % 8
-			agentAnimationSteps[i] += speedNorm / float64(*v.sim.SimulationSpeed)
+			agentAnimationSteps[i] += speedNorm * float64(*v.sim.SimulationSpeed)
 			if agentAnimationSteps[i] > 2 {
 				agentAnimationSteps[i] = 0
 			}
@@ -708,7 +709,10 @@ func main() {
 		SimulationSpeed: &SimulationSpeed,
 	}
 
-	ui := buildUi(nBarmans, nAgents)
+	ui := buildUi(nBarmans, nAgents, func(speed int) {
+		SimulationSpeed = float32(math.Max(0, float64(speed)/100))
+		simSpeedText.Label = fmt.Sprintf("Speed: %fx", float32(speed)/100.0)
+	})
 
 	view := View{
 		sim:        &sim,

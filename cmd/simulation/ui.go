@@ -22,7 +22,7 @@ var ActionToName = map[simulation.Action]string{
 	simulation.GoWithFriends:  "GoWithFriends",
 }
 
-func buildUi(nBarmen int, nAgents int) ebitenui.UI {
+func buildUi(nBarmen int, nAgents int, simSpeedChangeCallback func(int)) ebitenui.UI {
 
 	// Create the rootContainer with the NineSlice image as the background
 	rootContainer = widget.NewContainer(
@@ -123,7 +123,7 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 	)
 	simulationInfoWidget.AddChild(nAgentsText)
 
-	// construct a slider
+	// construct a slider for number of agents
 	slider = widget.NewSlider(
 		// Set the slider orientation - n/s vs e/w
 		widget.SliderOpts.Direction(widget.DirectionHorizontal),
@@ -162,6 +162,55 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 	)
 	// Set the current value of the slider
 	slider.Current = nAgents
+	simulationInfoWidget.AddChild(slider)
+
+	// label for sim speed
+	simSpeedText = widget.NewLabel(
+		widget.LabelOpts.Text(fmt.Sprintf("Simulation speed: %dx", 1), mplusNormalFont, &widget.LabelColor{
+			Idle: color.NRGBA{0xdf, 0xf4, 0xff, 0xff},
+		}),
+	)
+	simulationInfoWidget.AddChild(simSpeedText)
+
+	// construct a slider for simulation speed
+	slider = widget.NewSlider(
+		// Set the slider orientation - n/s vs e/w
+		widget.SliderOpts.Direction(widget.DirectionHorizontal),
+		// Set the minimum and maximum value for the slider
+		widget.SliderOpts.MinMax(nBarmen, 1500),
+
+		widget.SliderOpts.WidgetOpts(
+			// Set the widget's dimensions
+			widget.WidgetOpts.MinSize(150, 3),
+		),
+		widget.SliderOpts.Images(
+			// Set the track images
+			&widget.SliderTrackImage{
+				Idle:  image.NewNineSliceColor(color.NRGBA{100, 100, 100, 255}),
+				Hover: image.NewNineSliceColor(color.NRGBA{100, 100, 100, 255}),
+			},
+			// Set the handle images
+			&widget.ButtonImage{
+				Idle:    image.NewNineSliceColor(color.NRGBA{255, 100, 100, 255}),
+				Hover:   image.NewNineSliceColor(color.NRGBA{255, 100, 100, 255}),
+				Pressed: image.NewNineSliceColor(color.NRGBA{255, 100, 100, 255}),
+			},
+		),
+		// Set the size of the handle
+		widget.SliderOpts.FixedHandleSize(3),
+		// Set the offset to display the track
+		widget.SliderOpts.TrackOffset(0),
+		// Set the size to move the handle
+		widget.SliderOpts.PageSizeFunc(func() int {
+			return 1
+		}),
+		// Set the callback to call when the slider value is changed
+		widget.SliderOpts.ChangedHandler(func(args *widget.SliderChangedEventArgs) {
+			simSpeedChangeCallback(args.Current)
+		}),
+	)
+	// Set the current value of the slider
+	slider.Current = 100
 	simulationInfoWidget.AddChild(slider)
 
 	return ui

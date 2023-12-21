@@ -155,7 +155,7 @@ func (a *Agent) Run() {
 			time.Sleep(1 * time.Millisecond)
 			continue
 		}
-		if a.lastExecutionTime.Add(time.Duration(1.0/60.0*(*a.SimulationSpeed)*1000) * time.Millisecond).Before(time.Now()) {
+		if a.lastExecutionTime.Add(time.Duration(1.0/60.0/(*a.SimulationSpeed)*1000) * time.Millisecond).Before(time.Now()) {
 			a.Age++
 			a.Percept()
 			a.lastExecutionTime = time.Now()
