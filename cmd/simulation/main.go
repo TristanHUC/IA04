@@ -445,7 +445,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 			// in the spritesheet, the first direction is down and it rotates clockwise
 			sector = (8 - sector) % 8
 			sector = (sector + 6) % 8
-			agentAnimationSteps[i] += speedNorm
+			agentAnimationSteps[i] += speedNorm / float64(*v.sim.SimulationSpeed)
 			if agentAnimationSteps[i] > 2 {
 				agentAnimationSteps[i] = 0
 			}

@@ -35,7 +35,7 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
 			widget.RowLayoutOpts.Direction(widget.DirectionHorizontal),
 			widget.RowLayoutOpts.Padding(widget.NewInsetsSimple(10)),
-			widget.RowLayoutOpts.Spacing(10),
+			widget.RowLayoutOpts.Spacing(400),
 		)),
 	)
 	rootContainer.AddChild(rootLayout)
