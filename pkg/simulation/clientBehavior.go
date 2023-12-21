@@ -80,10 +80,9 @@ func (ClientBehavior) Reflect(a *Agent) {
 		// go to toilet
 		a.Action = GoToToilet
 	} else {
-		if a.DrinkContents < 0.1 && a.drinkEmptyTime.Add(a.timeBetweenDrinks).Before(a.lastExecutionTime) {
+		if a.DrinkContents < 0.1 && a.DrinkEmptyTime.Add(a.TimeBetweenDrinks).Before(a.LastExecutionTime) {
 			// go to bar
 			a.Action = GoToBar
-			a.State = LookingForFriends
 
 		}
 	}
@@ -168,6 +167,11 @@ func (ClientBehavior) Act(a *Agent) {
 		}
 	}
 
+	if a.Action == GoWithFriends && a.Goal == nil {
+		a.Action = GoToRandomSpot
+		a.State = LookingForFriends
+	}
+
 	// if agent has nothing to do and is with friends, try to stay still
 	if a.Action == None && a.Goal == nil && a.State == WithFriends {
 		//don't move
@@ -243,10 +247,10 @@ func (a *Agent) Drink() {
 		a.BladderContents += a.drinkSpeed
 		// 1000 for ml -> l, 0.07 for alcohol percentage, 0.78 alcohol density, 5 for liters in the body
 		a.BloodAlcoholLevel += (a.drinkSpeed * 1000) * 0.07 * 0.78 / 5
-	} else if !a.wantsABeer {
+	} else if a.wantsABeer {
 		// if drink just finished, set time
-		a.drinkEmptyTime = time.Now()
-		a.wantsABeer = true
+		a.DrinkEmptyTime = time.Now()
+		a.wantsABeer = false
 	}
 }
 
@@ -265,7 +269,7 @@ func (a *Agent) WaitForBeer() {
 	} else {
 		a.DrinkContents = 300
 		a.hasABarman = false
-		a.wantsABeer = false
+		a.wantsABeer = true
 		a.Action = GoFarFromBar
 		goalX, goalY := a.Behavior.CoordinatesGenerator(*a.picMapSparse, false)
 		g := jps.GetNode(int(goalY), int(goalX))

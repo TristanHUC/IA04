@@ -65,10 +65,10 @@ type Agent struct {
 	picMapDense                             [][]uint8
 	picMapSparse                            *_map.Map
 	rollingMeanMovement                     float64
-	lastExecutionTime                       time.Time
+	LastExecutionTime                       time.Time
 	DrinkContents                           float64
-	timeBetweenDrinks                       time.Duration
-	drinkEmptyTime                          time.Time
+	TimeBetweenDrinks                       time.Duration
+	DrinkEmptyTime                          time.Time
 	BladderContents                         float64
 	drinkSpeed                              float64
 	BloodAlcoholLevel                       float64
@@ -108,11 +108,11 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		PerceptExitChannel:         make(chan Action, 1),
 		picMapDense:                picMapDense,
 		picMapSparse:               picMapSparse,
-		lastExecutionTime:          time.Now(),
+		LastExecutionTime:          time.Now(),
 		DrinkContents:              0, // in milliliters
-		timeBetweenDrinks:          time.Duration(rand.Intn(120)) * time.Second,
+		TimeBetweenDrinks:          time.Duration(rand.Intn(60)) * time.Second,
 		drinkSpeed:                 0.05,
-		drinkEmptyTime:             time.Now(),
+		DrinkEmptyTime:             time.Now(),
 		BladderContents:            0, // in milliliters
 		BloodAlcoholLevel:          0,
 		Action:                     Action_,
@@ -129,7 +129,7 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		Age:                        0,
 		SimulationSpeed:            SimulationSpeed,
 		IDGroupFriends:             rand.Intn(7),
-		wantsABeer:                 false,
+		wantsABeer:                 true,
 		CloseToFriends:             false,
 	}
 	if rand.Intn(2) == 1 {
@@ -156,10 +156,10 @@ func (a *Agent) Run() {
 			time.Sleep(1 * time.Millisecond)
 			continue
 		}
-		if a.lastExecutionTime.Add(time.Duration(1.0/60.0*(*a.SimulationSpeed)*1000) * time.Millisecond).Before(time.Now()) {
+		if a.LastExecutionTime.Add(time.Duration(1.0/60.0*(*a.SimulationSpeed)*1000) * time.Millisecond).Before(time.Now()) {
 			a.Age++
 			a.Percept()
-			a.lastExecutionTime = time.Now()
+			a.LastExecutionTime = time.Now()
 
 			if a.BloodAlcoholLevel > 0.0001 {
 				a.BloodAlcoholLevel -= 0.0001
