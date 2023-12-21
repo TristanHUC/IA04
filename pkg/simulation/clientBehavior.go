@@ -73,7 +73,7 @@ func (ClientBehavior) CoordinatesGenerator(m _map.Map, isLaterGenerated bool) (f
 }
 
 func (ClientBehavior) Reflect(a *Agent) {
-	if a.Action != None { // doucement cabron, une action à la fois
+	if a.Action != None && a.Action != GoToRandomSpot { // doucement cabron, une action à la fois
 		return
 	}
 	if a.BladderContents > 450 {
