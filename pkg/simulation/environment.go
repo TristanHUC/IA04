@@ -27,10 +27,10 @@ func NewEnvironment(sparseMap _map.Map, denseMap [][]uint8, nAgents int, nBarman
 	//	env.Agents[i] = NewAgent(float64(x), float64(y), denseMap, &sparseMap, env.PerceptChannel)
 	//}
 	for iClient := 0; iClient < nAgents-nBarmans; iClient++ {
-		env.Agents[iClient] = NewAgent(iClient, ClientBehavior{}, denseMap, &sparseMap, env.PerceptChannel, false, env.Counter.GetChannelCounter(), SimulationSpeed)
+		env.Agents[iClient] = NewAgent(iClient, ClientBehavior{}, denseMap, &sparseMap, env.PerceptChannel, false, env.Counter.GetChannelCounter(), SimulationSpeed, GoToBar)
 	}
 	for iBarman := nAgents - nBarmans; iBarman < nAgents; iBarman++ {
-		env.Agents[iBarman] = NewAgent(iBarman, BarmanBehavior{}, denseMap, &sparseMap, env.PerceptChannel, false, env.Counter.GetChannelCounter(), SimulationSpeed)
+		env.Agents[iBarman] = NewAgent(iBarman, BarmanBehavior{}, denseMap, &sparseMap, env.PerceptChannel, false, env.Counter.GetChannelCounter(), SimulationSpeed, None)
 	}
 
 	//

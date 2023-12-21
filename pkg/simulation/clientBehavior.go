@@ -7,6 +7,7 @@ import (
 	"golang.org/x/exp/slices"
 	"math"
 	"math/rand"
+	"reflect"
 	"time"
 )
 
@@ -82,7 +83,7 @@ func (ClientBehavior) Reflect(a *Agent) {
 		if a.DrinkContents < 0.1 && a.drinkEmptyTime.Add(a.timeBetweenDrinks).Before(a.lastExecutionTime) {
 			// go to bar
 			a.Action = GoToBar
-			fmt.Println("bar !! ")
+			a.State = LookingForFriends
 
 		}
 	}
@@ -118,6 +119,13 @@ func (ClientBehavior) Act(a *Agent) {
 		a.Goal = &g
 	}
 
+	// Agent go to a random spot but it's just after he get a beer
+	if a.Action == GoFarFromBar && a.Goal == nil {
+		goalX, goalY := a.Behavior.CoordinatesGenerator(*a.picMapSparse, false)
+		g := jps.GetNode(int(goalY), int(goalX))
+		a.Goal = &g
+	}
+
 	// if agent wants to go to random spot, and current goal does not reflect that, change goal
 	if a.Action == GoToRandomSpot && a.Goal == nil {
 		goalX, goalY := a.Behavior.CoordinatesGenerator(*a.picMapSparse, false)
@@ -125,22 +133,66 @@ func (ClientBehavior) Act(a *Agent) {
 		a.Goal = &g
 	}
 
-	// if agent is currently going to a random spot
-	/*if a.Action == GoToRandomSpot && a.Goal != nil {
+	// if agent is currently going to a random spot and find a friend close to him => he follows him
+	if a.Action == GoToRandomSpot && a.Goal != nil {
 		for _, agent := range a.closeAgents {
-			if agent.IDGroupFriends == a.IDGroupFriends {
+			normeEucli := math.Sqrt((agent.X-a.X)*(agent.X-a.X) + (agent.Y-a.Y)*(agent.Y-a.Y))
+			if (normeEucli < 5) && agent.IDGroupFriends == a.IDGroupFriends && reflect.TypeOf(agent.Behavior) == reflect.TypeOf(ClientBehavior{}) && agent.Action != GoToBar && agent.Action != GoToToilet {
 				a.Goal = agent.Goal
 				a.Action = GoWithFriends
+				a.State = WithFriends
+				a.Path = nil
+				err := a.calculatePath()
+				if err != nil {
+					fmt.Errorf("error calculating path: %v", err)
+				}
 				break
 			}
 		}
-	}*/
+	}
 
-	// if agent has nothing to do, try to stay still
-	if a.Action == None && a.Goal == nil {
+	// if agent is currently following a friend but he lost him
+	if a.Action == GoWithFriends && a.Goal != nil {
+		a.CloseToFriends = false
+		for _, agent := range a.closeAgents {
+			normeEucli := math.Sqrt((agent.X-a.X)*(agent.X-a.X) + (agent.Y-a.Y)*(agent.Y-a.Y))
+			if (normeEucli < 5) && agent.IDGroupFriends == a.IDGroupFriends && reflect.TypeOf(agent.Behavior) == reflect.TypeOf(ClientBehavior{}) && agent.Action != GoToBar && agent.Action != GoToToilet {
+				a.CloseToFriends = true
+				a.State = WithFriends
+				break
+			}
+		}
+		if a.CloseToFriends == false {
+			a.Action = GoToRandomSpot
+			a.State = LookingForFriends
+		}
+	}
+
+	// if agent has nothing to do and is with friends, try to stay still
+	if a.Action == None && a.Goal == nil && a.State == WithFriends {
+		//don't move
 		goalX, goalY := a.X, a.Y
 		g := jps.GetNode(int(goalY), int(goalX))
 		a.Goal = &g
+		// check if his friends are still here
+		a.CloseToFriends = false
+		for _, agent := range a.closeAgents {
+			normeEucli := math.Sqrt((agent.X-a.X)*(agent.X-a.X) + (agent.Y-a.Y)*(agent.Y-a.Y))
+			if (normeEucli < 5) && agent.IDGroupFriends == a.IDGroupFriends && reflect.TypeOf(agent.Behavior) == reflect.TypeOf(ClientBehavior{}) && agent.Action != GoToBar && agent.Action != GoToToilet {
+				a.State = WithFriends
+				a.CloseToFriends = true
+				break
+			}
+		}
+		if a.CloseToFriends == false {
+			a.Action = GoToRandomSpot
+			a.State = LookingForFriends
+		}
+	}
+
+	// if agent has nothing to do but without friends => look for them
+	if a.Action == None && a.Goal == nil && a.State == LookingForFriends {
+		a.Action = GoToRandomSpot
 	}
 
 	if a.Action == None && a.Goal != nil {
@@ -170,7 +222,8 @@ func (ClientBehavior) Act(a *Agent) {
 		} else if a.Action == GoToToilet {
 			a.BladderContents = 0
 			a.Action = GoToRandomSpot
-			a.PerceptPeeChannel <- true
+			a.justPee = a.Age
+
 		} else if a.Action == GoToBar {
 			a.Action = WaitForBeer
 			go a.WaitForBeer()
@@ -178,7 +231,7 @@ func (ClientBehavior) Act(a *Agent) {
 			goalX, goalY := a.X, a.Y
 			g := jps.GetNode(int(goalY), int(goalX))
 			a.Goal = &g
-		} else if a.Action == GoToRandomSpot || a.Action == GoWithFriends {
+		} else if a.Action == GoToRandomSpot || a.Action == GoFarFromBar || a.Action == GoWithFriends {
 			a.Action = None
 		}
 	}
@@ -190,10 +243,10 @@ func (a *Agent) Drink() {
 		a.BladderContents += a.drinkSpeed
 		// 1000 for ml -> l, 0.07 for alcohol percentage, 0.78 alcohol density, 5 for liters in the body
 		a.BloodAlcoholLevel += (a.drinkSpeed * 1000) * 0.07 * 0.78 / 5
-	} else if a.DrinkContents == 0 && a.justFinishedBeer {
+	} else if !a.wantsABeer {
 		// if drink just finished, set time
 		a.drinkEmptyTime = time.Now()
-		a.justFinishedBeer = false
+		a.wantsABeer = true
 	}
 }
 
@@ -212,8 +265,8 @@ func (a *Agent) WaitForBeer() {
 	} else {
 		a.DrinkContents = 300
 		a.hasABarman = false
-		a.justFinishedBeer = true
-		a.Action = GoToRandomSpot
+		a.wantsABeer = false
+		a.Action = GoFarFromBar
 		goalX, goalY := a.Behavior.CoordinatesGenerator(*a.picMapSparse, false)
 		g := jps.GetNode(int(goalY), int(goalX))
 		a.Goal = &g

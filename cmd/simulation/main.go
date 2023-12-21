@@ -206,7 +206,7 @@ func (v *View) Update() error {
 	if nAgentsWished > len(v.sim.Environment.Agents) && time.Since(lastAgentCreationTime).Seconds() > 0.1 {
 		lastAgentCreationTime = time.Now()
 		v.sim.NAgents++
-		newAgent := simulation.NewAgent(v.sim.Environment.Agents[len(v.sim.Environment.Agents)-1].ID+1, simulation.ClientBehavior{}, v.sim.Environment.MapDense, &v.sim.Environment.MapSparse, v.sim.Environment.PerceptChannel, true, v.sim.Environment.Counter.BeerCounterChan, v.sim.SimulationSpeed)
+		newAgent := simulation.NewAgent(v.sim.Environment.Agents[len(v.sim.Environment.Agents)-1].ID+1, simulation.ClientBehavior{}, v.sim.Environment.MapDense, &v.sim.Environment.MapSparse, v.sim.Environment.PerceptChannel, true, v.sim.Environment.Counter.BeerCounterChan, v.sim.SimulationSpeed, simulation.GoToBar)
 		v.sim.Environment.Agents = append(v.sim.Environment.Agents, newAgent)
 		go v.sim.Environment.Agents[v.sim.NAgents-1].Run()
 	}
@@ -233,7 +233,8 @@ func (v *View) Update() error {
 			}
 		}
 	}
-
+	//fmt.Println("agent 1: ", ActionToName[v.sim.Environment.Agents[0].Action], int(v.sim.Environment.Agents[0].State))
+	//fmt.Println("agent 2: ", ActionToName[v.sim.Environment.Agents[1].Action], int(v.sim.Environment.Agents[0].State))
 	return nil
 }
 
@@ -533,7 +534,6 @@ func (v *View) Draw(screen *ebiten.Image) {
 
 		}
 		// ebitenvector.DrawFilledCircle(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), sizeX/2, color, false)
-
 		if v.sim.Environment.Agents[i].Path != nil && (v.showPaths || v.sim.Environment.Agents[i].ID == shownAgent.ID) {
 			// draw red circle for goal (99,99)
 			ebitenvector.DrawFilledCircle(SimulationImage, float32(v.sim.Environment.Agents[i].Goal.GetCol())*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Goal.GetRow())*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), colornames.Red, false)
@@ -644,6 +644,8 @@ func main() {
 	ActionToName[simulation.Action(6)] = "WaitForClient"
 	ActionToName[simulation.Action(7)] = "GoToClient"
 	ActionToName[simulation.Action(8)] = "GoToExit"
+	ActionToName[simulation.Action(9)] = "GoWithFriends"
+	ActionToName[simulation.Action(10)] = "GoFarFromBar"
 
 	nAgentsMax = 1000
 	// load font
@@ -683,7 +685,7 @@ func main() {
 		testMapDense[wall[1]][wall[0]] = 1
 	}
 
-	nAgents := 100
+	nAgents := 200
 	nAgentsWished = nAgents
 	nBarmans := 10
 
