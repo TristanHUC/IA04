@@ -6,7 +6,6 @@ import (
 	"golang.org/x/exp/slices"
 	"math"
 	"math/rand"
-	"time"
 )
 
 type ClientBehavior struct{}
@@ -78,11 +77,10 @@ func (ClientBehavior) Reflect(a *Agent) {
 		// go to toilet
 		a.Action = GoToToilet
 	} else {
-		if a.DrinkContents < 0.1 && a.drinkEmptyTime.Add(a.timeBetweenDrinks).Before(a.lastExecutionTime) {
+		if a.DrinkContents < 0.1 && a.drinkEmptyTime+a.timeBetweenDrinks < a.Age {
 			// go to bar
 			a.Action = GoToBar
 			//fmt.Println("bar !! ")
-
 		}
 	}
 }
@@ -191,7 +189,7 @@ func (a *Agent) Drink() {
 		a.BloodAlcoholLevel += (a.drinkSpeed * 1000) * 0.07 * 0.78 / 5
 	} else if a.DrinkContents == 0 && a.justFinishedBeer {
 		// if drink just finished, set time
-		a.drinkEmptyTime = time.Now()
+		a.drinkEmptyTime = a.Age
 		a.justFinishedBeer = false
 	}
 }

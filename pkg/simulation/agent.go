@@ -61,8 +61,8 @@ type Agent struct {
 	rollingMeanMovement                     float64
 	lastExecutionTime                       time.Time
 	DrinkContents                           float64
-	timeBetweenDrinks                       time.Duration
-	drinkEmptyTime                          time.Time
+	timeBetweenDrinks                       uint
+	drinkEmptyTime                          uint
 	BladderContents                         float64
 	drinkSpeed                              float64
 	BloodAlcoholLevel                       float64
@@ -101,10 +101,10 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		picMapDense:        picMapDense,
 		picMapSparse:       picMapSparse,
 		lastExecutionTime:  time.Now(),
-		DrinkContents:      0, // in milliliters
-		timeBetweenDrinks:  time.Duration(rand.Intn(15)) * time.Second,
+		DrinkContents:      0,                         // in milliliters
+		timeBetweenDrinks:  uint(rand.Intn(300) * 60), // time between drinks is random between 0 and 5 minutes
 		drinkSpeed:         0.1,
-		drinkEmptyTime:     time.Now(),
+		drinkEmptyTime:     0,
 		BladderContents:    0, // in milliliters
 		BloodAlcoholLevel:  0,
 		Action:             None,
