@@ -1,7 +1,6 @@
 package simulation
 
 import (
-	"fmt"
 	"github.com/ankurjha7/jps"
 	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
 	"golang.org/x/exp/slices"
@@ -82,7 +81,7 @@ func (ClientBehavior) Reflect(a *Agent) {
 		if a.DrinkContents < 0.1 && a.drinkEmptyTime.Add(a.timeBetweenDrinks).Before(a.lastExecutionTime) {
 			// go to bar
 			a.Action = GoToBar
-			fmt.Println("bar !! ")
+			//fmt.Println("bar !! ")
 
 		}
 	}
