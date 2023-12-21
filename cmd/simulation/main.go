@@ -159,12 +159,12 @@ func (v *View) Update() error {
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyG) {
-		// slow down simulation
-		v.sim.SetSpeed(v.sim.Environment.Agents[0].SimulationSpeed - 0.1)
+		// speed up simulation
+		*v.sim.SimulationSpeed -= 0.1
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyH) {
-		// speed up simulation
-		v.sim.SetSpeed(v.sim.Environment.Agents[0].SimulationSpeed + 0.1)
+		// slow down simulation
+		*v.sim.SimulationSpeed += 0.1
 	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
@@ -206,7 +206,7 @@ func (v *View) Update() error {
 	if nAgentsWished > len(v.sim.Environment.Agents) && time.Since(lastAgentCreationTime).Seconds() > 0.1 {
 		lastAgentCreationTime = time.Now()
 		v.sim.NAgents++
-		newAgent := simulation.NewAgent(v.sim.Environment.Agents[len(v.sim.Environment.Agents)-1].ID+1, simulation.ClientBehavior{}, v.sim.Environment.MapDense, &v.sim.Environment.MapSparse, v.sim.Environment.PerceptChannel, true, v.sim.Environment.Counter.BeerCounterChan)
+		newAgent := simulation.NewAgent(v.sim.Environment.Agents[len(v.sim.Environment.Agents)-1].ID+1, simulation.ClientBehavior{}, v.sim.Environment.MapDense, &v.sim.Environment.MapSparse, v.sim.Environment.PerceptChannel, true, v.sim.Environment.Counter.BeerCounterChan, v.sim.SimulationSpeed)
 		v.sim.Environment.Agents = append(v.sim.Environment.Agents, newAgent)
 		go v.sim.Environment.Agents[v.sim.NAgents-1].Run()
 	}
@@ -708,12 +708,14 @@ func main() {
 	// initialize last directions
 	agentLastDirections = make([]int, nAgentsMax)
 
-	env := simulation.NewEnvironment(testmap, testMapDense, nAgents, nBarmans)
+	SimulationSpeed := float32(1)
+	env := simulation.NewEnvironment(testmap, testMapDense, nAgents, nBarmans, &SimulationSpeed)
 	shownAgent = env.Agents[0]
 	sim := simulation.Simulation{
-		Environment: env,
-		NAgents:     nAgents,
-		NBarmans:    nBarmans,
+		Environment:     env,
+		NAgents:         nAgents,
+		NBarmans:        nBarmans,
+		SimulationSpeed: &SimulationSpeed,
 	}
 
 	ui := buildUi(nBarmans, nAgents)
@@ -732,6 +734,8 @@ func main() {
 	fmt.Println(" - A: toggle showing agent interactions")
 	fmt.Println(" - P: toggle showing paths")
 	fmt.Println(" - E: toggle agents' name")
+	fmt.Println(" - G: speed simulation")
+	fmt.Println(" - H: slow simulation")
 
 	// Call ebiten.RunGame to start your game loop.
 	if err := ebiten.RunGame(&view); err != nil {

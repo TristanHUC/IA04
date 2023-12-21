@@ -76,7 +76,7 @@ type Agent struct {
 	justPie                                 bool
 	woman                                   bool
 	Age                                     uint
-	SimulationSpeed                         float32
+	SimulationSpeed                         *float32
 }
 
 type PerceptRequest struct {
@@ -84,7 +84,7 @@ type PerceptRequest struct {
 	ResponseChannel chan []*Agent
 }
 
-func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool, BeerChanCounter chan uint) *Agent {
+func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool, BeerChanCounter chan uint, SimulationSpeed *float32) *Agent {
 	agent := &Agent{
 		ID:                 ID,
 		Speed:              float64(rand.Intn(1)+1) / 30,
@@ -114,7 +114,7 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		Name:               faker.FirstName() + " " + faker.LastName(),
 		justPie:            false,
 		Age:                0,
-		SimulationSpeed:    1,
+		SimulationSpeed:    SimulationSpeed,
 	}
 	if rand.Intn(2) == 1 {
 		agent.woman = true
@@ -150,7 +150,7 @@ func (a *Agent) Run() {
 			time.Sleep(1 * time.Millisecond)
 			continue
 		}
-		if a.lastExecutionTime.Add(time.Duration(1.0/60.0*a.SimulationSpeed*1000) * time.Millisecond).Before(time.Now()) {
+		if a.lastExecutionTime.Add(time.Duration(1.0/60.0*(*a.SimulationSpeed)*1000) * time.Millisecond).Before(time.Now()) {
 			a.Age++
 			a.Percept()
 			a.lastExecutionTime = time.Now()
