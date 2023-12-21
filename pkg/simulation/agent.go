@@ -61,7 +61,7 @@ type Agent struct {
 	perceptChannel                          chan PerceptRequest
 	PerceptExitChannel                      chan Action
 	BeerChannel                             chan bool
-	BeerCounterChan                         chan uint
+	BeerCounterChan                         chan int
 	picMapDense                             [][]uint8
 	picMapSparse                            *_map.Map
 	rollingMeanMovement                     float64
@@ -81,10 +81,10 @@ type Agent struct {
 	endOfLife                               bool
 	Paused                                  bool
 	Name                                    string
-	justPee                                 uint
-	justPeeOrBeerPowerDuration              uint
+	justPee                                 int
+	justPeeOrBeerPowerDuration              int
 	woman                                   bool
-	Age                                     uint
+	Age                                     int
 	SimulationSpeed                         *float32
 	IDGroupFriends                          int
 	wantsABeer                              bool
@@ -96,7 +96,7 @@ type PerceptRequest struct {
 	ResponseChannel chan []*Agent
 }
 
-func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool, BeerChanCounter chan uint, SimulationSpeed *float32, Action_ Action) *Agent {
+func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool, BeerChanCounter chan int, SimulationSpeed *float32, Action_ Action) *Agent {
 	agent := &Agent{
 		ID:                         ID,
 		Speed:                      float64(rand.Intn(1)+1) / 30,
@@ -124,7 +124,7 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		Behavior:                   behavior,
 		BeerCounterChan:            BeerChanCounter,
 		Name:                       faker.FirstName() + " " + faker.LastName(),
-		justPee:                    0,
+		justPee:                    -10,
 		justPeeOrBeerPowerDuration: 700,
 		Age:                        0,
 		SimulationSpeed:            SimulationSpeed,
@@ -198,6 +198,7 @@ func (a *Agent) Run() {
 			if a.Action == WaitForBeer {
 				agentStrengthMultiplier = 20
 			}
+
 			if a.justPee+a.justPeeOrBeerPowerDuration > a.Age {
 				agentStrengthMultiplier = 2
 			}
