@@ -385,9 +385,9 @@ func (v *View) Draw(screen *ebiten.Image) {
 
 	}
 	// draw bar spots and toilet spots
-	for _, Beer := range v.sim.Environment.MapSparse.BarPoints {
-		ebitenvector.DrawFilledCircle(SimulationImage, float32(Beer[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Beer[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 201, G: 201, B: 0, A: 255}, false)
-	}
+	//for _, Beer := range v.sim.Environment.MapSparse.BarPoints {
+	//	ebitenvector.DrawFilledCircle(SimulationImage, float32(Beer[0])*sizeX+sizeX/2-float32(v.cameraX), float32(Beer[1])*sizeY+sizeY/2-float32(v.cameraY), float32(4*v.cameraZoom), color.RGBA{R: 201, G: 201, B: 0, A: 255}, false)
+	//}
 	for _, WomanWC := range v.sim.Environment.MapSparse.WomanToiletPoints {
 		optsWoman := &ebiten.DrawImageOptions{}
 		optsWoman.GeoM.Scale(float64(v.cameraZoom), float64(v.cameraZoom))
