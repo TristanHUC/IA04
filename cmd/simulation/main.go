@@ -193,7 +193,7 @@ func (v *View) Update() error {
 	v.sim.NAgents = len(v.sim.Environment.Agents)
 
 	// if agents wished is bigger than the number of agents, create new agents
-	if nAgentsWished > len(v.sim.Environment.Agents) && time.Since(lastAgentCreationTime).Seconds() > 0.1 {
+	if nAgentsWished > len(v.sim.Environment.Agents) && time.Since(lastAgentCreationTime).Seconds() > math.Max(0.05, 0.2/float64(*v.sim.SimulationSpeed)) {
 		lastAgentCreationTime = time.Now()
 		v.sim.NAgents++
 		newAgent := simulation.NewAgent(v.sim.Environment.Agents[len(v.sim.Environment.Agents)-1].ID+1, simulation.ClientBehavior{}, v.sim.Environment.MapDense, &v.sim.Environment.MapSparse, v.sim.Environment.PerceptChannel, true, v.sim.Environment.Counter.BeerCounterChan, v.sim.SimulationSpeed)
