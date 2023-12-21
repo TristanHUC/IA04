@@ -24,6 +24,7 @@ const (
 	WaitForClient
 	GoToClient
 	GoToExit
+	GoWithFriends
 )
 
 //enum for the type of agent
@@ -73,10 +74,12 @@ type Agent struct {
 	endOfLife                               bool
 	Paused                                  bool
 	Name                                    string
-	justPie                                 bool
+	justPee                                 bool
 	woman                                   bool
 	Age                                     uint
 	SimulationSpeed                         *float32
+	IDGroupFriends                          int
+	justFinishedBeer                        bool
 }
 
 type PerceptRequest struct {
@@ -99,7 +102,7 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		picMapSparse:       picMapSparse,
 		lastExecutionTime:  time.Now(),
 		DrinkContents:      0, // in milliliters
-		timeBetweenDrinks:  time.Duration(rand.Intn(2)) * time.Second,
+		timeBetweenDrinks:  time.Duration(rand.Intn(15)) * time.Second,
 		drinkSpeed:         0.1,
 		drinkEmptyTime:     time.Now(),
 		BladderContents:    0, // in milliliters
@@ -112,9 +115,11 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		Behavior:           behavior,
 		BeerCounterChan:    BeerChanCounter,
 		Name:               faker.FirstName() + " " + faker.LastName(),
-		justPie:            false,
+		justPee:            false,
 		Age:                0,
 		SimulationSpeed:    SimulationSpeed,
+		IDGroupFriends:     rand.Intn(1),
+		justFinishedBeer:   true,
 	}
 	if rand.Intn(2) == 1 {
 		agent.woman = true
@@ -133,10 +138,10 @@ func (a *Agent) PerceptOrderExit() {
 }
 
 func (a *Agent) PerceptEndOfPieEnhanced() {
-	a.justPie = <-a.PerceptPeeChannel
-	if a.justPie == true {
+	a.justPee = <-a.PerceptPeeChannel
+	if a.justPee == true {
 		time.Sleep(6 * time.Second)
-		a.justPie = false
+		a.justPee = false
 	}
 	go a.PerceptEndOfPieEnhanced()
 }
@@ -192,7 +197,7 @@ func (a *Agent) Run() {
 			if a.Action == WaitForBeer {
 				agentStrengthMultiplier = 20
 			}
-			if a.justPie == true {
+			if a.justPee == true {
 				agentStrengthMultiplier = 2
 			}
 			err := a.calculatePosition(wallInteractionDistanceMultiplier, 1, agentStrengthMultiplier)

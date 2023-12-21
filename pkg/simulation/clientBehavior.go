@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"fmt"
 	"github.com/ankurjha7/jps"
 	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
 	"golang.org/x/exp/slices"
@@ -78,9 +79,11 @@ func (ClientBehavior) Reflect(a *Agent) {
 		// go to toilet
 		a.Action = GoToToilet
 	} else {
-		if !a.drinkEmptyTime.IsZero() && a.drinkEmptyTime.Add(a.timeBetweenDrinks).Before(a.lastExecutionTime) {
+		if a.DrinkContents < 0.1 && a.drinkEmptyTime.Add(a.timeBetweenDrinks).Before(a.lastExecutionTime) {
 			// go to bar
 			a.Action = GoToBar
+			fmt.Println("bar !! ")
+
 		}
 	}
 }
@@ -121,6 +124,17 @@ func (ClientBehavior) Act(a *Agent) {
 		g := jps.GetNode(int(goalY), int(goalX))
 		a.Goal = &g
 	}
+
+	// if agent is currently going to a random spot
+	/*if a.Action == GoToRandomSpot && a.Goal != nil {
+		for _, agent := range a.closeAgents {
+			if agent.IDGroupFriends == a.IDGroupFriends {
+				a.Goal = agent.Goal
+				a.Action = GoWithFriends
+				break
+			}
+		}
+	}*/
 
 	// if agent has nothing to do, try to stay still
 	if a.Action == None && a.Goal == nil {
@@ -164,7 +178,7 @@ func (ClientBehavior) Act(a *Agent) {
 			goalX, goalY := a.X, a.Y
 			g := jps.GetNode(int(goalY), int(goalX))
 			a.Goal = &g
-		} else if a.Action == GoToRandomSpot {
+		} else if a.Action == GoToRandomSpot || a.Action == GoWithFriends {
 			a.Action = None
 		}
 	}
@@ -176,9 +190,10 @@ func (a *Agent) Drink() {
 		a.BladderContents += a.drinkSpeed
 		// 1000 for ml -> l, 0.07 for alcohol percentage, 0.78 alcohol density, 5 for liters in the body
 		a.BloodAlcoholLevel += (a.drinkSpeed * 1000) * 0.07 * 0.78 / 5
-	} else if a.drinkEmptyTime.IsZero() {
+	} else if a.DrinkContents == 0 && a.justFinishedBeer {
 		// if drink just finished, set time
 		a.drinkEmptyTime = time.Now()
+		a.justFinishedBeer = false
 	}
 }
 
@@ -197,6 +212,7 @@ func (a *Agent) WaitForBeer() {
 	} else {
 		a.DrinkContents = 300
 		a.hasABarman = false
+		a.justFinishedBeer = true
 		a.Action = GoToRandomSpot
 		goalX, goalY := a.Behavior.CoordinatesGenerator(*a.picMapSparse, false)
 		g := jps.GetNode(int(goalY), int(goalX))
