@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/ebitenui/ebitenui"
 	"github.com/ebitenui/ebitenui/image"
 	"github.com/ebitenui/ebitenui/widget"
@@ -35,7 +36,7 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
 			widget.RowLayoutOpts.Direction(widget.DirectionHorizontal),
 			widget.RowLayoutOpts.Padding(widget.NewInsetsSimple(10)),
-			widget.RowLayoutOpts.Spacing(400),
+			widget.RowLayoutOpts.Spacing(250),
 		)),
 	)
 	rootContainer.AddChild(rootLayout)
@@ -62,7 +63,7 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 		widget.ContainerOpts.BackgroundImage(image.NewNineSliceColor(color.NRGBA{157, 157, 157, 230})), // Set NineSlice image as the background
 		widget.ContainerOpts.WidgetOpts(
 			widget.WidgetOpts.LayoutData(widget.RowLayoutData{
-				Position: widget.RowLayoutPositionEnd,
+				Position: widget.RowLayoutPositionStart,
 			}),
 		),
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
@@ -115,51 +116,23 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 		Container: rootContainer,
 	}
 
-	//buttonImage := simulation.LoadButtonImage()
-	//openButton = widget.NewButton(
-	//	widget.ButtonOpts.Image(buttonImage),
-	//	widget.ButtonOpts.Text(" X ", mplusNormalFont, &widget.ButtonTextColor{
-	//		Idle: color.NRGBA{0xdf, 0xf4, 0xff, 0xff},
-	//	}),
-	//	widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
-	//		isOpen = !isOpen
-	//		if isOpen {
-	//			rootContainer.AddChild(agentInfoWidget)
-	//			rootContainer.AddChild(slider)
-	//			agentInfoWidget.AddChild(textarea)
-	//			agentInfoWidget.AddChild(layoutImage)
-	//			layoutImage.AddChild(ImageBeer)
-	//			layoutImage.AddChild(ImageCharacter)
-	//			layoutImage.AddChild(ImageBladder)
-	//		} else {
-	//			rootContainer.RemoveChild(agentInfoWidget)
-	//			rootContainer.RemoveChild(slider)
-	//			agentInfoWidget.RemoveChild(textarea)
-	//			agentInfoWidget.RemoveChild(layoutImage)
-	//			layoutImage.RemoveChild(ImageBeer)
-	//			layoutImage.RemoveChild(ImageCharacter)
-	//			layoutImage.RemoveChild(ImageBladder)
-	//
-	//		}
-	//	}),
-	//	widget.ButtonOpts.WidgetOpts(
-	//		instruct the container's anchor layout to center the button both horizontally and vertically
-	//widget.WidgetOpts.LayoutData(widget.AnchorLayoutData{
-	//	HorizontalPosition: widget.AnchorLayoutPositionStart,
-	//	VerticalPosition:   widget.AnchorLayoutPositionStart,
-	//}),
-	//),
-	//)
+	nAgentsText = widget.NewLabel(
+		widget.LabelOpts.Text(fmt.Sprintf("%d/%d Agents", nAgents, nAgentsWished), mplusNormalFont, &widget.LabelColor{
+			Idle: color.NRGBA{0xdf, 0xf4, 0xff, 0xff},
+		}),
+	)
+	simulationInfoWidget.AddChild(nAgentsText)
+
 	// construct a slider
 	slider = widget.NewSlider(
 		// Set the slider orientation - n/s vs e/w
-		widget.SliderOpts.Direction(widget.DirectionVertical),
+		widget.SliderOpts.Direction(widget.DirectionHorizontal),
 		// Set the minimum and maximum value for the slider
 		widget.SliderOpts.MinMax(nBarmen, 600),
 
 		widget.SliderOpts.WidgetOpts(
 			// Set the widget's dimensions
-			widget.WidgetOpts.MinSize(3, 150),
+			widget.WidgetOpts.MinSize(150, 3),
 		),
 		widget.SliderOpts.Images(
 			// Set the track images
@@ -184,24 +157,12 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 		}),
 		// Set the callback to call when the slider value is changed
 		widget.SliderOpts.ChangedHandler(func(args *widget.SliderChangedEventArgs) {
-			nAgentsWished = 610 - args.Current
+			nAgentsWished = args.Current
 		}),
 	)
-	simulationInfoWidget.AddChild(slider)
 	// Set the current value of the slider
-	slider.Current = 610 - nAgents
-
-	//rootContainer.AddChild(openButton)
-	//rootContainer.AddChild(agentInfoWidget)
-	//rootContainer.AddChild(simulationInfoWidget)
-
-	//agentInfoWidget.AddChild(textarea)
-	//agentInfoWidget.AddChild(agentInfoImages)
-	//simulationInfoWidget.AddChild(slider)
-
-	//agentInfoImages.AddChild(ImageBeer)
-	//agentInfoImages.AddChild(ImageCharacter)
-	//agentInfoImages.AddChild(ImageBladder)
+	slider.Current = nAgents
+	simulationInfoWidget.AddChild(slider)
 
 	return ui
 }

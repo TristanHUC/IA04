@@ -64,13 +64,12 @@ var (
 	agentNameWidget      *widget.Label
 	agentActionLabel     *widget.Label
 	agentInfoWidget      *widget.Container
+	nAgentsText          *widget.Label
+	nAgentsWishedText    *widget.Label
 	ImageBeer            *widget.Container
 	ImageBladder         *widget.Container
 	ImageCharacter       *widget.Container
-	textarea             *widget.TextArea
-	openButton           *widget.Button
 	slider               *widget.Slider
-	isOpen               bool = true
 	EmptyBeerImg         *ebiten.Image
 	LogoWC               *ebiten.Image
 
@@ -482,6 +481,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 
 			//color = colornames.Red
 			//textarea.SetText(fmt.Sprintf("Number of agents wanted :%d \n Number of agent currently :%d \n action : %s", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents, nAgentsWished, v.sim.NAgents, ActionToName[v.sim.Environment.Agents[i].Action]))
+			nAgentsText.Label = fmt.Sprintf("%d/%d Agents", v.sim.NAgents, nAgentsWished)
 			agentNameWidget.Label = v.sim.Environment.Agents[i].Name
 			agentActionLabel.Label = "Action: " + ActionToName[v.sim.Environment.Agents[i].Action]
 			opts := &ebiten.DrawImageOptions{}
@@ -644,7 +644,7 @@ func main() {
 
 	const dpi = 72
 	mplusNormalFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
-		Size:    10,
+		Size:    14,
 		DPI:     dpi,
 		Hinting: font.HintingVertical,
 	})
