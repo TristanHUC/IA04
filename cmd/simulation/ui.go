@@ -4,8 +4,22 @@ import (
 	"github.com/ebitenui/ebitenui"
 	"github.com/ebitenui/ebitenui/image"
 	"github.com/ebitenui/ebitenui/widget"
+	"gitlab.utc.fr/royhucheradorni/ia04.git/pkg/simulation"
 	"image/color"
 )
+
+var ActionToName = map[simulation.Action]string{
+	simulation.None:           "None",
+	simulation.GoToRandomSpot: "GoToRandomSpot",
+	simulation.GoToToilet:     "GoToToilet",
+	simulation.GoToBar:        "GoToBar",
+	simulation.GoToBeerTap:    "GoToBeerTap",
+	simulation.WaitForBeer:    "WaitForBeer",
+	simulation.WaitForClient:  "WaitForClient",
+	simulation.GoToClient:     "GoToClient",
+	simulation.GoToExit:       "GoToExit",
+	simulation.GoWithFriends:  "GoWithFriends",
+}
 
 func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 
@@ -64,6 +78,13 @@ func buildUi(nBarmen int, nAgents int) ebitenui.UI {
 		}),
 	)
 	agentInfoWidget.AddChild(agentNameWidget)
+
+	agentActionLabel = widget.NewLabel(
+		widget.LabelOpts.Text("None", mplusNormalFont, &widget.LabelColor{
+			Idle: color.NRGBA{0xdf, 0xf4, 0xff, 0xff},
+		}),
+	)
+	agentInfoWidget.AddChild(agentActionLabel)
 
 	// layout for agent info images
 	agentInfoImages = widget.NewContainer(

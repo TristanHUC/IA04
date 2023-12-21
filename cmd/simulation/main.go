@@ -62,6 +62,7 @@ var (
 	simulationInfoWidget *widget.Container
 	agentInfoImages      *widget.Container
 	agentNameWidget      *widget.Label
+	agentActionLabel     *widget.Label
 	agentInfoWidget      *widget.Container
 	ImageBeer            *widget.Container
 	ImageBladder         *widget.Container
@@ -103,8 +104,6 @@ var (
 	BeerImage       *ebiten.Image
 	BladderImage    *ebiten.Image
 	CharacterImage  *ebiten.Image
-
-	ActionToName map[simulation.Action]string
 
 	nAgentsWished         int
 	lastAgentCreationTime time.Time
@@ -484,6 +483,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 			//color = colornames.Red
 			//textarea.SetText(fmt.Sprintf("Number of agents wanted :%d \n Number of agent currently :%d \n action : %s", v.sim.Environment.Agents[i].DrinkContents, v.sim.Environment.Agents[i].BladderContents, nAgentsWished, v.sim.NAgents, ActionToName[v.sim.Environment.Agents[i].Action]))
 			agentNameWidget.Label = v.sim.Environment.Agents[i].Name
+			agentActionLabel.Label = "Action: " + ActionToName[v.sim.Environment.Agents[i].Action]
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Scale(float64(v.cameraZoom), float64(v.cameraZoom))
 			opts.GeoM.Translate((v.sim.Environment.Agents[i].X+1)*float64(sizeX)-float64(v.cameraX), (v.sim.Environment.Agents[i].Y+1)*float64(sizeY)-float64(v.cameraY))
@@ -565,7 +565,7 @@ func (v *View) Draw(screen *ebiten.Image) {
 				if normeEucli < 5 {
 					color := colornames.Red
 					color.A = 50
-					ebitenvector.StrokeLine(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), float32(otherAgent.X)*sizeX+sizeX/2-float32(v.cameraX), float32(otherAgent.Y)*sizeY+sizeY/2-float32(v.cameraY), float32(1*v.cameraZoom), color, false)
+					ebitenvector.StrokeLine(SimulationImage, float32(v.sim.Environment.Agents[i].X)*sizeX+sizeX/2-float32(v.cameraX), float32(v.sim.Environment.Agents[i].Y)*sizeY+sizeY/2-float32(v.cameraY), float32(otherAgent.X)*sizeX+sizeX/2-float32(v.cameraX), float32(otherAgent.Y)*sizeY+sizeY/2-float32(v.cameraY), float32(0.5*v.cameraZoom), color, false)
 				}
 			}
 		}
@@ -634,17 +634,6 @@ func main() {
 	CharacterImage = ebiten.NewImage(200, 200)
 	BladderImage = ebiten.NewImage(100, 100)
 	BeerImage = ebiten.NewImage(100, 100)
-
-	ActionToName = make(map[simulation.Action]string)
-	ActionToName[simulation.Action(0)] = "none"
-	ActionToName[simulation.Action(1)] = "GoToRandomSpot"
-	ActionToName[simulation.Action(2)] = "GoToToilet"
-	ActionToName[simulation.Action(3)] = "GoToBar"
-	ActionToName[simulation.Action(4)] = "GoToBeerTap"
-	ActionToName[simulation.Action(5)] = "WaitForBeer"
-	ActionToName[simulation.Action(6)] = "WaitForClient"
-	ActionToName[simulation.Action(7)] = "GoToClient"
-	ActionToName[simulation.Action(8)] = "GoToExit"
 
 	nAgentsMax = 1000
 	// load font

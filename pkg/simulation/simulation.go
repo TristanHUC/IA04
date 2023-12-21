@@ -18,6 +18,6 @@ func (s *Simulation) Start() {
 func (s *Simulation) TogglePause() {
 	s.Paused = !s.Paused
 	for i := 0; i < s.NAgents; i++ {
-		s.Environment.Agents[i].Paused = !s.Environment.Agents[i].Paused
+		s.Environment.Agents[i].Paused = s.Paused
 	}
 }
