@@ -667,7 +667,7 @@ func main() {
 
 	nAgents := 100
 	nAgentsWished = nAgents
-	nBarmans := 10
+	nBarmans := 7
 
 	// initialize animation steps
 	agentAnimationSteps = make([]float64, nAgentsMax)

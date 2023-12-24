@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"fmt"
 	"github.com/ankurjha7/jps"
 	_map "gitlab.utc.fr/royhucheradorni/ia04.git/pkg/map"
 	"golang.org/x/exp/slices"
@@ -31,9 +32,10 @@ func (BarmanBehavior) Act(a *Agent) {
 		a.SearchForClient()
 	}
 
-	// if agent want to go to client, and the client is not waiting for a barman, change the Action to WaitForClient
-	if a.Action == GoToClient && a.client != nil && a.client.Action != WaitForBeer {
+	// if agent want to go to client, and the client is not waiting for a barman or the client doesn't exist anymore or he must go, change the Action to WaitForClient
+	if a.Action == GoToClient && (a.client == nil || (a.client != nil && (a.client.Action != WaitForBeer || a.client.endOfLife))) {
 		a.Action = WaitForClient
+		fmt.Println("client is not waiting for a barman anymore")
 		a.client = nil
 	}
 
