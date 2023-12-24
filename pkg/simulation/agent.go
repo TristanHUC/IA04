@@ -124,7 +124,7 @@ func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_m
 		Behavior:                   behavior,
 		BeerCounterChan:            BeerChanCounter,
 		Name:                       faker.FirstName() + " " + faker.LastName(),
-		justPee:                    -10,
+		justPee:                    -700,
 		justPeeOrBeerPowerDuration: 700,
 		Age:                        0,
 		SimulationSpeed:            SimulationSpeed,

@@ -160,7 +160,8 @@ func (v *View) Update() error {
 
 	if ebiten.IsKeyPressed(ebiten.KeyG) {
 		// speed up simulation
-		*v.sim.SimulationSpeed -= 0.1
+		speed := *v.sim.SimulationSpeed - 0.1
+		*v.sim.SimulationSpeed = float32(math.Max(0, float64(speed)))
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyH) {
 		// slow down simulation
@@ -685,7 +686,7 @@ func main() {
 		testMapDense[wall[1]][wall[0]] = 1
 	}
 
-	nAgents := 200
+	nAgents := 100
 	nAgentsWished = nAgents
 	nBarmans := 10
 
