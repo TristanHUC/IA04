@@ -20,6 +20,7 @@ var ActionToName = map[simulation.Action]string{
 	simulation.GoToClient:     "GoToClient",
 	simulation.GoToExit:       "GoToExit",
 	simulation.GoWithFriends:  "GoWithFriends",
+	simulation.GoFarFromBar:   "GoFarFromBar",
 }
 
 func buildUi(nBarmen int, nAgents int, simSpeedChangeCallback func(int)) ebitenui.UI {
