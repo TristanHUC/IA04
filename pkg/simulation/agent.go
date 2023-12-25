@@ -13,6 +13,7 @@ import (
 )
 
 type Action int
+type State int
 
 const (
 	None Action = iota
@@ -25,6 +26,12 @@ const (
 	GoToClient
 	GoToExit
 	GoWithFriends
+	GoFarFromBar
+)
+
+const (
+	LookingForFriends State = iota
+	WithFriends
 )
 
 //enum for the type of agent
@@ -53,13 +60,12 @@ type Agent struct {
 	channelAgent                            chan []*Agent
 	perceptChannel                          chan PerceptRequest
 	PerceptExitChannel                      chan Action
-	PerceptPeeChannel                       chan bool
 	BeerChannel                             chan bool
-	BeerCounterChan                         chan uint
+	BeerCounterChan                         chan int
 	picMapDense                             [][]uint8
 	picMapSparse                            *_map.Map
 	rollingMeanMovement                     float64
-	lastExecutionTime                       time.Time
+	LastExecutionTime                       time.Time
 	DrinkContents                           float64
 	timeBetweenDrinks                       uint
 	drinkEmptyTime                          uint
@@ -67,6 +73,7 @@ type Agent struct {
 	drinkSpeed                              float64
 	BloodAlcoholLevel                       float64
 	Action                                  Action
+	State                                   State
 	Behavior                                Behavior
 	closeAgents                             []*Agent
 	client                                  *Agent
@@ -74,12 +81,14 @@ type Agent struct {
 	endOfLife                               bool
 	Paused                                  bool
 	Name                                    string
-	justPee                                 bool
+	justPee                                 int
+	justPeeOrBeerPowerDuration              int
 	woman                                   bool
-	Age                                     uint
+	Age                                     int
 	SimulationSpeed                         *float32
 	IDGroupFriends                          int
-	justFinishedBeer                        bool
+	wantsABeer                              bool
+	CloseToFriends                          bool
 }
 
 type PerceptRequest struct {
@@ -87,39 +96,41 @@ type PerceptRequest struct {
 	ResponseChannel chan []*Agent
 }
 
-func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool, BeerChanCounter chan uint, SimulationSpeed *float32) *Agent {
+func NewAgent(ID int, behavior Behavior, picMapDense [][]uint8, picMapSparse *_map.Map, perceptChannel chan PerceptRequest, isLaterGenerated bool, BeerChanCounter chan int, SimulationSpeed *float32, Action_ Action) *Agent {
 	agent := &Agent{
-		ID:                 ID,
-		Speed:              float64(rand.Intn(1)+1) / 30,
-		reactivity:         0.1,
-		controllable:       true,
-		channelAgent:       make(chan []*Agent, 1),
-		BeerChannel:        make(chan bool, 1),
-		perceptChannel:     perceptChannel,
-		PerceptExitChannel: make(chan Action, 1),
-		PerceptPeeChannel:  make(chan bool, 1),
-		picMapDense:        picMapDense,
-		picMapSparse:       picMapSparse,
-		lastExecutionTime:  time.Now(),
-		DrinkContents:      0,                         // in milliliters
-		timeBetweenDrinks:  uint(rand.Intn(300) * 60), // time between drinks is random between 0 and 5 minutes
-		drinkSpeed:         0.1,
+		ID:                         ID,
+		Speed:                      float64(rand.Intn(1)+1) / 30,
+		reactivity:                 0.1,
+		controllable:               true,
+		channelAgent:               make(chan []*Agent, 1),
+		BeerChannel:                make(chan bool, 1),
+		perceptChannel:             perceptChannel,
+		PerceptExitChannel:         make(chan Action, 1),
+		picMapDense:                picMapDense,
+		picMapSparse:               picMapSparse,
+		LastExecutionTime:          time.Now(),
+		DrinkContents:              0, // in milliliters
+		timeBetweenDrinks: uint(rand.Intn(300) * 60), // time between drinks is random between 0 and 5 minutes
+		drinkSpeed:                 0.05,
 		drinkEmptyTime:     0,
-		BladderContents:    0, // in milliliters
-		BloodAlcoholLevel:  0,
-		Action:             None,
-		closeAgents:        make([]*Agent, 0),
-		client:             nil,
-		hasABarman:         false,
-		endOfLife:          false,
-		Behavior:           behavior,
-		BeerCounterChan:    BeerChanCounter,
-		Name:               faker.FirstName() + " " + faker.LastName(),
-		justPee:            false,
-		Age:                0,
-		SimulationSpeed:    SimulationSpeed,
-		IDGroupFriends:     rand.Intn(1),
-		justFinishedBeer:   true,
+		BladderContents:            0, // in milliliters
+		BloodAlcoholLevel:          0,
+		Action:                     Action_,
+		State:                      LookingForFriends,
+		closeAgents:                make([]*Agent, 0),
+		client:                     nil,
+		hasABarman:                 false,
+		endOfLife:                  false,
+		Behavior:                   behavior,
+		BeerCounterChan:            BeerChanCounter,
+		Name:                       faker.FirstName() + " " + faker.LastName(),
+		justPee:                    -700,
+		justPeeOrBeerPowerDuration: 700,
+		Age:                        0,
+		SimulationSpeed:            SimulationSpeed,
+		IDGroupFriends:             rand.Intn(7),
+		wantsABeer:                 true,
+		CloseToFriends:             false,
 	}
 	if rand.Intn(2) == 1 {
 		agent.woman = true
@@ -137,28 +148,18 @@ func (a *Agent) PerceptOrderExit() {
 	a.Action = <-a.PerceptExitChannel
 }
 
-func (a *Agent) PerceptEndOfPieEnhanced() {
-	a.justPee = <-a.PerceptPeeChannel
-	if a.justPee == true {
-		time.Sleep(6 * time.Second)
-		a.justPee = false
-	}
-	go a.PerceptEndOfPieEnhanced()
-}
-
 func (a *Agent) Run() {
 	pathNotCalculatedYet := true
 	go a.PerceptOrderExit()
-	go a.PerceptEndOfPieEnhanced()
 	for !a.endOfLife {
 		if a.Paused {
 			time.Sleep(1 * time.Millisecond)
 			continue
 		}
-		if a.lastExecutionTime.Add(time.Duration(1.0/60.0/(*a.SimulationSpeed)*1000) * time.Millisecond).Before(time.Now()) {
+		if a.LastExecutionTime.Add(time.Duration(1.0/60.0*(*a.SimulationSpeed)*1000) * time.Millisecond).Before(time.Now()) {
 			a.Age++
 			a.Percept()
-			a.lastExecutionTime = time.Now()
+			a.LastExecutionTime = time.Now()
 
 			if a.BloodAlcoholLevel > 0.0001 {
 				a.BloodAlcoholLevel -= 0.0001
@@ -197,7 +198,8 @@ func (a *Agent) Run() {
 			if a.Action == WaitForBeer {
 				agentStrengthMultiplier = 20
 			}
-			if a.justPee == true {
+
+			if a.justPee+a.justPeeOrBeerPowerDuration > a.Age {
 				agentStrengthMultiplier = 2
 			}
 			err := a.calculatePosition(wallInteractionDistanceMultiplier, 1, agentStrengthMultiplier)

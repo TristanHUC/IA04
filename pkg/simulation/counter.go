@@ -6,12 +6,12 @@ import (
 )
 
 type Counter struct {
-	BeerCounterChan chan uint
+	BeerCounterChan chan int
 }
 
 func (c *Counter) Run() {
 	// Create a new file
-	var nbAction uint
+	var nbAction int
 	file, err := os.Create("beer_sales_log.txt")
 	if err != nil {
 		fmt.Println("Error creating file: ", err)
@@ -40,10 +40,10 @@ func (c *Counter) Run() {
 
 func NewCounter() *Counter {
 	return &Counter{
-		BeerCounterChan: make(chan uint, 10),
+		BeerCounterChan: make(chan int, 10),
 	}
 }
 
-func (c *Counter) GetChannelCounter() chan uint {
+func (c *Counter) GetChannelCounter() chan int {
 	return c.BeerCounterChan
 }

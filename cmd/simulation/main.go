@@ -196,8 +196,7 @@ func (v *View) Update() error {
 	if nAgentsWished > len(v.sim.Environment.Agents) && time.Since(lastAgentCreationTime).Seconds() > math.Max(0.05, 0.2/float64(*v.sim.SimulationSpeed)) {
 		lastAgentCreationTime = time.Now()
 		v.sim.NAgents++
-		newAgent := simulation.NewAgent(v.sim.Environment.Agents[len(v.sim.Environment.Agents)-1].ID+1, simulation.ClientBehavior{}, v.sim.Environment.MapDense, &v.sim.Environment.MapSparse, v.sim.Environment.PerceptChannel, true, v.sim.Environment.Counter.BeerCounterChan, v.sim.SimulationSpeed)
-		newAgent.Action = simulation.GoToRandomSpot
+		newAgent := simulation.NewAgent(v.sim.Environment.Agents[len(v.sim.Environment.Agents)-1].ID+1, simulation.ClientBehavior{}, v.sim.Environment.MapDense, &v.sim.Environment.MapSparse, v.sim.Environment.PerceptChannel, true, v.sim.Environment.Counter.BeerCounterChan, v.sim.SimulationSpeed, simulation.GoToBar)
 		v.sim.Environment.Agents = append(v.sim.Environment.Agents, newAgent)
 		go v.sim.Environment.Agents[v.sim.NAgents-1].Run()
 	}

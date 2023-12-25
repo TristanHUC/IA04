@@ -219,9 +219,9 @@ func (g *Game) Update() error {
 					break
 				}
 			}
-			for i, ManWCtoilet := range g.Map.BarPoints {
+			for i, ManWCtoilet := range g.Map.ManToiletPoints {
 				if ManWCtoilet[0] == int(float32(x+g.CameraX)/10) && ManWCtoilet[1] == int(float32(y+g.CameraY)/10) {
-					g.Map.BarPoints = append(g.Map.ManToiletPoints[:i], g.Map.ManToiletPoints[i+1:]...)
+					g.Map.ManToiletPoints = append(g.Map.ManToiletPoints[:i], g.Map.ManToiletPoints[i+1:]...)
 					break
 				}
 			}
