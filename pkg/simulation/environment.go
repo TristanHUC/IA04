@@ -58,9 +58,12 @@ func (e *Environment) PerceptRequestsHandler() {
 }
 
 func (e *Environment) Update() {
-	for i, agent := range e.Agents {
-		if agent.endOfLife == true {
-			e.Agents = append(e.Agents[:i], e.Agents[i+1:]...)
+	var agentsToKeep []*Agent
+
+	for _, agent := range e.Agents {
+		if !agent.endOfLife {
+			agentsToKeep = append(agentsToKeep, agent)
 		}
 	}
+	e.Agents = agentsToKeep
 }

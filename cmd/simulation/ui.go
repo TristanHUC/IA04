@@ -10,17 +10,18 @@ import (
 )
 
 var ActionToName = map[simulation.Action]string{
-	simulation.None:           "None",
-	simulation.GoToRandomSpot: "GoToRandomSpot",
-	simulation.GoToToilet:     "GoToToilet",
-	simulation.GoToBar:        "GoToBar",
-	simulation.GoToBeerTap:    "GoToBeerTap",
-	simulation.WaitForBeer:    "WaitForBeer",
-	simulation.WaitForClient:  "WaitForClient",
-	simulation.GoToClient:     "GoToClient",
-	simulation.GoToExit:       "GoToExit",
-	simulation.GoWithFriends:  "GoWithFriends",
-	simulation.GoFarFromBar:   "GoFarFromBar",
+	simulation.None:                  "None",
+	simulation.GoToRandomSpot:        "GoToRandomSpot",
+	simulation.GoToToilet:            "GoToToilet",
+	simulation.GoToBar:               "GoToBar",
+	simulation.GoToBeerTap:           "GoToBeerTap",
+	simulation.WaitForBeer:           "WaitForBeer",
+	simulation.WaitForClient:         "WaitForClient",
+	simulation.GoToClient:            "GoToClient",
+	simulation.GoToExit:              "GoToExit",
+	simulation.GoWithFriends:         "GoWithFriends",
+	simulation.GoFarFromBarAndToilet: "GoFarFromBarAndToilet",
+	simulation.WaitingWithFriends:    "WaitingWithFriends",
 }
 
 func buildUi(nBarmen int, nAgents int, simSpeedChangeCallback func(int)) ebitenui.UI {
