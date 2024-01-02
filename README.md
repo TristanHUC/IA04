@@ -14,9 +14,9 @@ Pic à GOGO is a multi-agent simulation of a bar. The goal of the simulation is 
 
 ## Project Setup
 
-This project is written in Go. Ituses the [Go module system](https://blog.golang.org/using-go-modules) to manage
+This project is written in Go. It uses the [Go module system](https://blog.golang.org/using-go-modules) to manage
 dependencies. As the simulation needs a handful of external assets in addition to the executable to work properly, we
-recommend to use the `go run` command inside the cloned repository instead of using `go install`.
+recommend to use the `go run` command inside the cloned repository instead of using `go install`. We also recommand to the project with git clone instead of downloading the zip file, as the zip file does not include the git submodules.
 
 ### Installation
 
